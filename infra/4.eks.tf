@@ -20,6 +20,11 @@ access_config {
   ]
 }
 
+data "aws_eks_cluster_auth" "this" {
+  name = data.aws_eks_cluster.cluster1.name
+}
+
+
 resource "aws_eks_access_entry" "eks-access-entry" {
   cluster_name      = aws_eks_cluster.cluster1.name
   principal_arn     = aws_iam_role.CODEBUILD-ROLE.arn
