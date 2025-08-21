@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 permissions:
-  id-token: write     # for OIDC
+  id-token: write    
   contents: read
 
 env:
@@ -82,7 +82,7 @@ jobs:
     #     uses: aws-actions/configure-aws-credentials@v4
     #     with:
     #       role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsDeployRole
-    #       aws-region: ${{ env.AWS_REGION }}
+        #   aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
