@@ -20,21 +20,26 @@ access_config {
   ]
 }
 
-data "aws_eks_cluster_auth" "cluster" {
-  name = var.cluster_name
+data "aws_eks_cluster" "cluster1" {
+  name       = aws_eks_cluster.cluster1.name
+  depends_on = [aws_eks_cluster.cluster1]
+}
+
+data "aws_eks_cluster_auth" "cluster1" {
+  name       = aws_eks_cluster.cluster1.name
+  depends_on = [aws_eks_cluster.cluster1]
 }
 
 provider "kubernetes" {
-  host                   = aws_eks_cluster.cluster1.endpoint
-  cluster_ca_certificate = base64decode(aws_eks_cluster.cluster1.certificate_authority[0].data)
+  host                   = data.aws_eks_cluster.cluster1.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster1.certificate_authority[0].data)
   token                  = data.aws_eks_cluster_auth.cluster1.token
-
 }
 
 provider "helm" {
   kubernetes {
-    host                   = aws_eks_cluster.cluster1.endpoint
-    cluster_ca_certificate = base64decode(aws_eks_cluster.cluster1.certificate_authority[0].data)
+    host                   = data.aws_eks_cluster.cluster1.endpoint
+    cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster1.certificate_authority[0].data)
     token                  = data.aws_eks_cluster_auth.cluster1.token
   }
 }
