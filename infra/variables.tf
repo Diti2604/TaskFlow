@@ -6,6 +6,7 @@ variable "account_id" {
 }
 
 
+
 #VPC VARIABLES
 variable "aws_region" {
   type        = string
@@ -135,4 +136,9 @@ variable "route53_zone_id" {
 #   type        = string
 #   description = "Existing public hosted zone name"
 #   default     = "767397989221.realhandsonlabs.net"
-# }
+# }\
+
+variable "aws_region"        { 
+type = string 
+default = "us-east-1" 
+}
