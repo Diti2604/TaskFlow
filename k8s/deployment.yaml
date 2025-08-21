@@ -14,11 +14,9 @@ spec:
       labels:
         app: fastapi
     spec:
-      # serviceAccountName: eks-secrets-manager
       containers:
-      - name: fastapi
-        image: 654654263428.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:${IMAGE_TAG}
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 8000
-
+        - name: fastapi
+          image: IMAGE_URI_PLACEHOLDER
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000

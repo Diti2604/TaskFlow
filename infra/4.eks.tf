@@ -391,3 +391,33 @@ resource "aws_iam_policy" "eks-alb-policy" {
     ]
   })
 }
+
+
+resource "kubernetes_ingress_v1" "fastapi" {
+  metadata {
+    name = "fastapi-ingress"
+    annotations = {
+      "alb.ingress.kubernetes.io/scheme"        = "internal"
+      "alb.ingress.kubernetes.io/listen-ports"  = "[{\"HTTP\":80},{\"HTTPS\":443}]"
+      "alb.ingress.kubernetes.io/certificate-arn" = aws_acm_certificate.cert-base.arn
+      "alb.ingress.kubernetes.io/target-type"   = "ip"
+    }
+  }
+  spec {
+    ingress_class_name = "alb"
+    rule {
+      http {
+        path {
+          path      = "/"
+          path_type = "Prefix"
+          backend {
+            service {
+              name = "fastapi-service"
+              port { number = 80 }
+            }
+          }
+        }
+      }
+    }
+  }
+}
