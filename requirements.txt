@@ -1,0 +1,5 @@
+uvicorn
+fastapi
+pymysql
+boto3
+dotenv
