@@ -118,22 +118,3 @@ variable "node_group_name" {
   description = "Name of the nodegorup in EKS "
   default = "node-group-1"
 }
-
-
-
-
-
-
-
-variable "route53_zone_id" {
-  type        = string
-  description = "Route 53 zone id for the records coming in from the Certificate Manager"
-  default     = "Z081996227J09R5UI0W0F"
-}
-
-
-# variable "public_zone_name" {
-#   type        = string
-#   description = "Existing public hosted zone name"
-#   default     = "767397989221.realhandsonlabs.net"
-# }\
