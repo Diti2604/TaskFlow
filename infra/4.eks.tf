@@ -37,7 +37,7 @@ provider "kubernetes" {
 }
 
 provider "helm" {
-  kubernetes {
+  kubernetes = {
     host                   = data.aws_eks_cluster.cluster1.endpoint
     cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster1.certificate_authority[0].data)
     token                  = data.aws_eks_cluster_auth.cluster1.token
@@ -483,29 +483,17 @@ resource "helm_release" "aws_lb_controller" {
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
-
   depends_on = [kubernetes_service_account.alb_controller]
-  
-  set {
-    name  = "clusterName"
-    value = var.cluster_name
-  }
-  set {
-    name  = "region"
-    value = var.aws_region
-  }
-  set {
-    name  = "vpcId"
-    value = aws_vpc.my-vpc.id
-  }
-  set {
-    name  = "serviceAccount.create"
-    value = "false"
-  }
-  set {
-    name  = "serviceAccount.name"
-    value = kubernetes_service_account.alb_controller.metadata[0].name
-  }
+
+  values = [yamlencode({
+    clusterName = var.cluster_name
+    region      = var.aws_region
+    vpcId       = aws_vpc.my-vpc.id
+    serviceAccount = {
+      create = false
+      name   = kubernetes_service_account.alb_controller.metadata[0].name
+    }
+  })]
 }
 
 
