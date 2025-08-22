@@ -495,18 +495,3 @@ resource "helm_release" "aws_lb_controller" {
     }
   })]
 }
-
-
-resource "aws_ec2_tag" "subnet_cluster_tag" {
-  for_each    = toset(aws_subnet.private_subnets[*].id)
-  resource_id = each.value
-  key         = "kubernetes.io/cluster/${var.cluster_name}"
-  value       = "shared"
-}
-
-resource "aws_ec2_tag" "subnet_internal_elb" {
-  for_each    = toset(aws_subnet.private_subnets[*].id)
-  resource_id = each.value
-  key         = "kubernetes.io/role/internal-elb"
-  value       = "1"
-}
