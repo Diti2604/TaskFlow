@@ -485,7 +485,7 @@ resource "helm_release" "aws_lb_controller" {
   namespace  = "kube-system"
 
   depends_on = [kubernetes_service_account.alb_controller]
-
+  
   set {
     name  = "clusterName"
     value = var.cluster_name
