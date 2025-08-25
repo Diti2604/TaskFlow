@@ -47,7 +47,10 @@ jobs:
           terraform plan -detailed-exitcode -out=tfplan -input=false -no-color
           ec=$?
           echo "Plan exit code: $ec"
+          # expose as step output (KEY=VALUE)
           echo "code=$ec" >> "$GITHUB_OUTPUT"
+          # optional: also export to env if you want
+          echo "EXIT_CODE=$ec" >> "$GITHUB_ENV"
           if [ "$ec" -eq 1 ]; then
             echo "Plan failed"; exit 1
           fi
