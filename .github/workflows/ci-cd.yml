@@ -12,6 +12,7 @@ env:
   ECR_REPO: fastapi-app      
   EKS_CLUSTER: cluster1 
   K8S_NAMESPACE: default  
+
 jobs:
   terraform:
     runs-on: ubuntu-latest
@@ -40,29 +41,22 @@ jobs:
       - name: Terraform Plan
         id: plan
         working-directory: ${{ env.TF_DIR }}
+        shell: bash
         run: |
-          set -e
-          # Check if first run (no state file yet)
-          if [ ! -f "terraform.tfstate" ]; then
-            echo "first_run=true" >> $GITHUB_ENV
-            exit 0
-          fi
-
-          terraform plan -detailed-exitcode -input=false -no-color -out=tfplan || exit_code=$?
-
-          if [ "${exit_code}" == "2" ]; then
-            echo "changes=true" >> $GITHUB_ENV
-          elif [ "${exit_code}" == "0" ]; then
-            echo "changes=false" >> $GITHUB_ENV
-          else
-            echo "Terraform plan failed"
-            exit 1
+          set +e
+          terraform plan -detailed-exitcode -out=tfplan
+          code=$?
+          echo "exit_code=$code"
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ $code -eq 1 ]; then
+            echo "Plan failed"; exit 1
           fi
 
       - name: Terraform Apply
-        if: env.first_run == 'true' || env.changes == 'true'
+        if: ${{github.event_name == 'push' && steps.plan.outputs.exit_code == '2'}}
         working-directory: ${{ env.TF_DIR }}
-        run: terraform apply -auto-approve tfplan || terraform apply -auto-approve
+        run: terraform apply -auto-approve tfplan
+
 
   build-and-push:
     if: github.event_name == 'push'
