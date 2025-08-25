@@ -42,23 +42,12 @@ jobs:
         id: plan
         working-directory: ${{ env.TF_DIR }}
         shell: bash
-        run: |
-          set +e
-          terraform plan -detailed-exitcode -out=tfplan -input=false -no-color
-          ec=$?
-          echo "Plan exit code: $ec"
-          # expose as step output (KEY=VALUE)
-          echo "code=$ec" >> "$GITHUB_OUTPUT"
-          # optional: also export to env if you want
-          echo "EXIT_CODE=$ec" >> "$GITHUB_ENV"
-          if [ "$ec" -eq 1 ]; then
-            echo "Plan failed"; exit 1
-          fi
+        run: terraform plan -detailed-exitcode
 
       - name: Terraform Apply
-        if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request') && steps.plan.outputs.code == '2' }}
+        if: ${{github.event_name == 'push' && steps.plan.outputs.code == '2'}}
         working-directory: ${{ env.TF_DIR }}
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve
 
 
   build-and-push:
