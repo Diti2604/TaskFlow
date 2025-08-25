@@ -20,16 +20,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
       - name: Terraform Init
         working-directory: ${{ env.TF_DIR }}
         run: terraform init -upgrade
@@ -41,22 +31,29 @@ jobs:
       - name: Terraform Plan
         id: plan
         working-directory: ${{ env.TF_DIR }}
-        shell: bash
         run: |
-          set +e
-          terraform plan -detailed-exitcode -out=tfplan
-          code=$?
-          echo "exit_code=$code"
-          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
-          if [ $code -eq 1 ]; then
-            echo "Plan failed"; exit 1
+          set -e
+          # Check if first run (no state file yet)
+          if [ ! -f "terraform.tfstate" ]; then
+            echo "first_run=true" >> $GITHUB_ENV
+            exit 0
           fi
-# ${{ steps.img.outputs.uri }}
-      - name: Terraform Apply
-        if: ${{github.event_name == 'push' && steps.plan.outputs.exit_code == '2'}}
-        working-directory: ${{ env.TF_DIR }}
-        run: terraform apply -auto-approve tfplan
 
+          terraform plan -detailed-exitcode -input=false -no-color -out=tfplan || exit_code=$?
+
+          if [ "${exit_code}" == "2" ]; then
+            echo "changes=true" >> $GITHUB_ENV
+          elif [ "${exit_code}" == "0" ]; then
+            echo "changes=false" >> $GITHUB_ENV
+          else
+            echo "Terraform plan failed"
+            exit 1
+          fi
+
+      - name: Terraform Apply
+        if: env.first_run == 'true' || env.changes == 'true'
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform apply -auto-approve tfplan || terraform apply -auto-approve
 
   build-and-push:
     if: github.event_name == 'push'
