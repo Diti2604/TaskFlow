@@ -86,10 +86,6 @@ resource "aws_eks_access_policy_association" "eks-access-cluster-admin-policy" {
   }
 }
 
-#node monitoring agent
-#External DNS
-#Metrics Server
-
 resource "aws_eks_addon" "addon-1" {
   cluster_name = aws_eks_cluster.cluster1.name
   addon_name   = "vpc-cni"
@@ -455,7 +451,6 @@ resource "aws_iam_role" "alb_controller_sa" {
       Action = "sts:AssumeRoleWithWebIdentity",
       Condition = {
         StringEquals = {
-          # IMPORTANT: subject must match namespace:name of the SA
           "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub" = "system:serviceaccount:kube-system:aws-load-balancer-controller"
         }
       }
