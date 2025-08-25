@@ -44,18 +44,18 @@ jobs:
         shell: bash
         run: |
           set +e
-          terraform plan -detailed-exitcode -out=tfplan
+          terraform plan -input=false -detailed-exitcode -out=tfplan
           code=$?
-          echo "exit_code=$code"
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
-          if [ $code -eq 1 ]; then
+          set -e
+          if [ "$code" -eq 1 ]; then
             echo "Plan failed"; exit 1
           fi
-   
+
       - name: Terraform Apply
-        if: ${{github.event_name == 'push' && steps.plan.outputs.exit_code == '2'}}
+        if: ${{ github.event_name == 'push' && steps.plan.outputs.exit_code == '2' }}
         working-directory: ${{ env.TF_DIR }}
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -input=false -auto-approve tfplan
 
 
   build-and-push:
