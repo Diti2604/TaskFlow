@@ -42,10 +42,10 @@ jobs:
         id: plan
         working-directory: ${{ env.TF_DIR }}
         shell: bash
-        run: terraform plan -detailed-exitcode
+        run: terraform plan
 
       - name: Terraform Apply
-        if: steps.plan.outcome == 'success' && steps.plan.outputs.exit-code == '2'
+        if: github.event_name == 'push'
         working-directory: ${{ env.TF_DIR }}
         run: terraform apply -auto-approve
 
