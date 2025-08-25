@@ -42,12 +42,20 @@ jobs:
         id: plan
         working-directory: ${{ env.TF_DIR }}
         shell: bash
-        run: terraform plan
-
+        run: |
+          set +e
+          terraform plan -detailed-exitcode -out=tfplan
+          code=$?
+          echo "exit_code=$code"
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ $code -eq 1 ]; then
+            echo "Plan failed"; exit 1
+          fi
+# ${{ steps.img.outputs.uri }}
       - name: Terraform Apply
-        if: github.event_name == 'push'
+        if: ${{github.event_name == 'push' && steps.plan.outputs.exit_code == '2'}}
         working-directory: ${{ env.TF_DIR }}
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve tfplan
 
 
   build-and-push:
@@ -121,7 +129,7 @@ jobs:
         run: |
           kubectl -n "$K8S_NAMESPACE" get deploy/fastapi-deployment || kubectl apply -n "$K8S_NAMESPACE" -f k8s/deployment.yaml
           kubectl -n "$K8S_NAMESPACE" get svc/fastapi-service || kubectl apply -n "$K8S_NAMESPACE" -f k8s/service.yaml
-          # Ingress is managed by Terraform — no apply here.
+
 
       - name: Set image and roll out
         run: |
