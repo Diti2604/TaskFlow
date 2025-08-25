@@ -53,7 +53,7 @@ jobs:
 
   build-and-push:
     if: github.event_name == 'push'
-    # needs: terraform
+    needs: terraform
     runs-on: ubuntu-latest
     outputs:
       image_uri: ${{ steps.build.outputs.image_uri }}
@@ -90,7 +90,7 @@ jobs:
 
   deploy:
     if: github.event_name == 'push'
-    needs: [build-and-push]
+    needs: [terraform, build-and-push]
     runs-on: ubuntu-latest
     env:
       AWS_REGION: us-east-1
