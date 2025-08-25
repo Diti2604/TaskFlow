@@ -46,11 +46,15 @@ jobs:
           set +e
           terraform plan -input=false -detailed-exitcode -out=tfplan
           code=$?
+          echo "::notice title=Terraform Plan Exit Code::$code"
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           set -e
           if [ "$code" -eq 1 ]; then
             echo "Plan failed"; exit 1
           fi
+
+      - name: Debug plan exit code
+        run: echo "steps.plan.outputs.exit_code=${{ steps.plan.outputs.exit_code }}"
 
       - name: Terraform Apply
         if: ${{ github.event_name == 'push' && steps.plan.outputs.exit_code == '2' }}
