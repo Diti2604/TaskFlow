@@ -38,14 +38,25 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
         run: terraform validate
 
-      - name: Terraform Plan (PRs)
-        if: github.event_name == 'pull_request'
+      - name: Terraform Plan
+        id: plan
         working-directory: ${{ env.TF_DIR }}
+        shell: bash
         run: |
-          terraform plan -detailed-exitcode -out=tfplan || exit_code=$?
-          echo "exit_code=$exit_code" >> $GITHUB_ENV
+          set +e
+          terraform plan -detailed-exitcode -out=tfplan
+          code=$?
+          echo "exit_code=$code"
+          echo "exit_code=$code" >> $GITHUB_ENV
+          if [ $code -eq 1 ]; then
+            echo "Plan failed"; exit 1
+          fi
 
-      - name: Terraform Apply (pushes)
+
+      - name: No changes — skip apply
+        if: github.event_name == 'push' && env.exit_code == '0'
+        run: echo "No changes detected. Skipping apply."
+      - name: Terraform Apply (only when changes exist)
         if: github.event_name == 'push' && env.exit_code == '2'
         working-directory: ${{ env.TF_DIR }}
         run: terraform apply -auto-approve tfplan
