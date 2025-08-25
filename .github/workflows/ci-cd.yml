@@ -44,16 +44,16 @@ jobs:
         shell: bash
         run: |
           set +e
-          terraform plan -detailed-exitcode -out=tfplan
-          code=$?
-          echo "exit_code=$code"
-          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
-          if [ $code -eq 1 ]; then
+          terraform plan -detailed-exitcode -out=tfplan -input=false -no-color
+          ec=$?
+          echo "Plan exit code: $ec"
+          echo "code=$ec" >> "$GITHUB_OUTPUT"
+          if [ "$ec" -eq 1 ]; then
             echo "Plan failed"; exit 1
           fi
 
       - name: Terraform Apply
-        if: ${{github.event_name == 'push' && steps.plan.outputs.code == '2'}}
+        if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request') && steps.plan.outputs.code == '2' }}
         working-directory: ${{ env.TF_DIR }}
         run: terraform apply -auto-approve tfplan
 
