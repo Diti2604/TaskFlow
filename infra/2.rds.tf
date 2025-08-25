@@ -20,5 +20,6 @@ resource "aws_db_instance" "database-1" {
   skip_final_snapshot           = true
   apply_immediately             = true
   depends_on = [ aws_vpc.my-vpc ]
+  
 }
 
