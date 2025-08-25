@@ -45,7 +45,7 @@ jobs:
         run: terraform plan -detailed-exitcode
 
       - name: Terraform Apply
-        if: ${{github.event_name == 'push' && steps.plan.outputs.code == '2'}}
+        if: steps.plan.outcome == 'success' && steps.plan.outputs.exit-code == '2'
         working-directory: ${{ env.TF_DIR }}
         run: terraform apply -auto-approve
 
