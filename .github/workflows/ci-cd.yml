@@ -14,39 +14,42 @@ env:
   K8S_NAMESPACE: default  
 
 jobs:
-  # terraform:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  #     - name: Configure AWS credentials
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ env.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-  #     - name: Setup Terraform
-  #       uses: hashicorp/setup-terraform@v3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
 
-  #     - name: Terraform Init
-  #       working-directory: ${{ env.TF_DIR }}
-  #       run: terraform init -upgrade
+      - name: Terraform Init
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform init -upgrade
 
-  #     - name: Terraform Validate
-  #       working-directory: ${{ env.TF_DIR }}
-  #       run: terraform validate
+      - name: Terraform Validate
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform validate
 
-  #     - name: Terraform Plan (PRs)
-  #       if: github.event_name == 'pull_request'
-  #       working-directory: ${{ env.TF_DIR }}
-  #       run: terraform plan -no-color
+      - name: Terraform Plan (PRs)
+        if: github.event_name == 'pull_request'
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          terraform plan -detailed-exitcode -out=tfplan || exit_code=$?
+          echo "exit_code=$exit_code" >> $GITHUB_ENV
 
-  #     - name: Terraform Apply (pushes)
-  #       if: github.event_name == 'push'
-  #       working-directory: ${{ env.TF_DIR }}
-  #       run: terraform apply -auto-approve
+      - name: Terraform Apply (pushes)
+        if: github.event_name == 'push' && env.exit_code == '2'
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform apply -auto-approve tfplan
+
 
   build-and-push:
     if: github.event_name == 'push'
@@ -124,4 +127,4 @@ jobs:
       - name: Set image and roll out
         run: |
           kubectl -n "$K8S_NAMESPACE" set image deploy/fastapi-deployment fastapi=${{ steps.img.outputs.uri }}
-          kubectl -n "$K8S_NAMESPACE" rollout status deploy/fastapi-deployment --timeout=20m
+          
