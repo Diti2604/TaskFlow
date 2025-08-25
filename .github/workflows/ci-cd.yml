@@ -51,7 +51,7 @@ jobs:
           if [ $code -eq 1 ]; then
             echo "Plan failed"; exit 1
           fi
-
+   
       - name: Terraform Apply
         if: ${{github.event_name == 'push' && steps.plan.outputs.exit_code == '2'}}
         working-directory: ${{ env.TF_DIR }}
