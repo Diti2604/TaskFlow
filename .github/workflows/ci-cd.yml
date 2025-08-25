@@ -47,13 +47,13 @@ jobs:
           terraform plan -detailed-exitcode -out=tfplan
           code=$?
           echo "exit_code=$code"
-          echo "exit_code=$code" >> "$GITHUB_ENV"
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           if [ $code -eq 1 ]; then
             echo "Plan failed"; exit 1
           fi
 
       - name: Terraform Apply
-        if: ${{github.event_name == 'push' && env.exit_code == '2'}}
+        if: ${{github.event_name == 'push' && steps.plan.outputs.code == '2'}}
         working-directory: ${{ env.TF_DIR }}
         run: terraform apply -auto-approve tfplan
 
