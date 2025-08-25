@@ -46,8 +46,8 @@ jobs:
           set +e
           terraform plan -input=false -detailed-exitcode -out=tfplan
           code=$?
-          echo "::notice title=Terraform Plan Exit Code::$code"
-          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          echo "Terraform exit code: $code"
+          echo "exit_code=$code" >> $GITHUB_OUTPUT
           set -e
           if [ "$code" -eq 1 ]; then
             echo "Plan failed"; exit 1
