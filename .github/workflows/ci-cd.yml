@@ -53,13 +53,11 @@ jobs:
             echo "Plan failed"; exit 1
           fi
 
-      - name: Debug plan exit code
-        run: echo "steps.plan.outputs.exit_code=${{ steps.plan.outputs.exit_code }}"
 
       - name: Terraform Apply
-        if: ${{ github.event_name == 'push' && steps.plan.outputs.exit_code == '2' }}
+        if: ${{ github.event_name == 'push' }}
         working-directory: ${{ env.TF_DIR }}
-        run: terraform apply -input=false -auto-approve tfplan
+        run: terraform apply -auto-approve tfplan
 
 
   build-and-push:
