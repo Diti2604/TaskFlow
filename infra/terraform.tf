@@ -6,4 +6,9 @@ terraform {
     }
     
   }
+  backend "s3" {
+     bucket = "cmdk"
+     key = "backend"
+     region = "us-east-1"
+  }
 }
