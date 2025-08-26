@@ -485,7 +485,7 @@ resource "helm_release" "aws_lb_controller" {
     region      = var.aws_region
     vpcId       = aws_vpc.my-vpc.id
     serviceAccount = {
-      create = true
+      create = false
       name   = kubernetes_service_account.alb_controller.metadata[0].name
     }
   })]
