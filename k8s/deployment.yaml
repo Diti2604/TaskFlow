@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: fastapi
-          image: 767398133420.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:${IMAGE_TAG}
+          image: 767398133420.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8000

@@ -87,17 +87,14 @@ jobs:
         run: |
           set -e
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-          IMAGE_URI="${REGISTRY}/${ECR_REPO}:${GITHUB_SHA}"
+          REPOSITORY_URI=$ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/fastapi-app
+          IMAGE_TAG=latest
 
-          docker build -t "${IMAGE_URI}" .
-          docker push "${IMAGE_URI}"
+          docker build -t $REPOSITORY_URI:$IMAGE_TAG .
 
-          docker tag "${IMAGE_URI}" "${REGISTRY}/${ECR_REPO}:latest"
-          docker push "${REGISTRY}/${ECR_REPO}:latest"
+          docker push $REPOSITORY_URI:$IMAGE_TAG
 
-          echo "image_uri=${IMAGE_URI}" >> $GITHUB_OUTPUT
-
+          aws eks update-kubeconfig --region $AWS_REGION --name cluster1
 
   deploy:
     if: github.event_name == 'push'
