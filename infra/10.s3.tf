@@ -1,10 +1,10 @@
-resource "aws_s3_bucket" "s3_bucket" {
-  bucket = "my-backend-bucket-34572630948302531413"
+# resource "aws_s3_bucket" "s3_bucket" {
+#   bucket = "my-tf-bucket-${var.account_id}"
 
-  tags = {
-    Name = "My-bucket"
-  }
-}
+#   tags = {
+#     Name = "My-bucket"
+#   }
+# }
 
 
 # resource "aws_s3_bucket_website_configuration" "site" {
