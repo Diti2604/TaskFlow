@@ -7,8 +7,9 @@ terraform {
     
   }
   backend "s3" {
-     bucket = "cmdk"
+     bucket = "my-tf-bucket-${var.account_id}"
      key = "backend"
      region = "us-east-1"
+
   }
 }
