@@ -135,7 +135,7 @@ jobs:
           kubectl -n "$K8S_NAMESPACE" get svc/fastapi-service || kubectl apply -n "$K8S_NAMESPACE" -f k8s/service.yaml
 
 
-      - name: Set image and roll out
-        run: |
-          kubectl -n "$K8S_NAMESPACE" set image deploy/fastapi-deployment fastapi=${{ steps.img.outputs.uri }}
+      # - name: Set image and roll out
+      #   run: |
+      #     kubectl -n "$K8S_NAMESPACE" set image deploy/fastapi-deployment fastapi=${{ steps.img.outputs.uri }}
           
