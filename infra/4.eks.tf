@@ -417,7 +417,7 @@ resource "kubernetes_ingress_v1" "fastapi" {
     name = "fastapi-ingress"
     annotations = {
       "kubernetes.io/ingress.class"            = "alb"
-      "alb.ingress.kubernetes.io/scheme"        = "internal"
+      "alb.ingress.kubernetes.io/scheme"        = "internet-facing"
       "alb.ingress.kubernetes.io/listen-ports"  = "[{\"HTTP\":80},{\"HTTPS\":443}]"
       "alb.ingress.kubernetes.io/certificate-arn" = aws_acm_certificate.cert-base.arn
       "alb.ingress.kubernetes.io/target-type"   = "ip"
