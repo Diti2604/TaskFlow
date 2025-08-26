@@ -129,8 +129,8 @@ jobs:
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
       - name: Ensure deployment/service exist
         run: |
-          kubectl apply -f -n "$K8S_NAMESPACE" -f k8s/deployment.yaml 
-          kubectl apply -f -n "$K8S_NAMESPACE" -f k8s/service.yaml
+          kubectl apply -f -n "$K8S_NAMESPACE"  k8s/deployment.yaml 
+          kubectl apply -f -n "$K8S_NAMESPACE"  k8s/service.yaml
 
 
 
