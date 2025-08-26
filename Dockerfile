@@ -2,7 +2,7 @@ FROM python:3.11.2
 
 RUN apt-get update && apt-get install -y gcc default-libmysqlclient-dev
 
-WORKDIR /backend
+WORKDIR /app
 
 COPY requirements.txt .
 
