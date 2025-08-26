@@ -4,6 +4,7 @@ metadata:
   name: fastapi-deployment
   labels:
     app: fastapi
+    app.kubernetes.io/managed-by: helm
 spec:
   replicas: 2
   selector:
