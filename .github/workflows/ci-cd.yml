@@ -123,16 +123,20 @@ jobs:
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --region "$AWS_REGION" --name "$EKS_CLUSTER"
 
-      - name: Compute image URI
+      - name: Apply Deployment and Service
         id: img
         run: |
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          echo "uri=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${GITHUB_SHA}" >> $GITHUB_OUTPUT
-
       - name: Ensure deployment/service exist
         run: |
-          kubectl -n "$K8S_NAMESPACE" get deploy/fastapi-deployment || kubectl apply -n "$K8S_NAMESPACE" -f k8s/deployment.yaml
-          kubectl -n "$K8S_NAMESPACE" get svc/fastapi-service || kubectl apply -n "$K8S_NAMESPACE" -f k8s/service.yaml
+          kubectl apply -f -n "$K8S_NAMESPACE" -f k8s/deployment.yaml 
+          kubectl apply -f -n "$K8S_NAMESPACE" -f k8s/service.yaml
+
+
+
+         # kubectl -n "$K8S_NAMESPACE" get deploy/fastapi-deployment || kubectl apply -n "$K8S_NAMESPACE" -f k8s/deployment.yaml
+          # kubectl -n "$K8S_NAMESPACE" get svc/fastapi-service || kubectl apply -n "$K8S_NAMESPACE" -f k8s/service.yaml
+          # envsubst '${IMAGE_TAG}' < deployment.yaml > deployment-final.yaml
 
 
       # - name: Set image and roll out

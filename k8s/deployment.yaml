@@ -4,7 +4,6 @@ metadata:
   name: fastapi-deployment
   labels:
     app: fastapi
-    app.kubernetes.io/managed-by: helm
 spec:
   replicas: 2
   selector:
@@ -17,7 +16,7 @@ spec:
     spec:
       containers:
         - name: fastapi
-          image: IMAGE_URI_PLACEHOLDER
+          image: 992382478305.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:${IMAGE_TAG}
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
