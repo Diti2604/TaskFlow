@@ -36,7 +36,7 @@ resource "aws_subnet" "private-subnets" {
   vpc_id     = aws_vpc.my-vpc.id
   cidr_block = var.vpc_private_cidr_blocks[count.index]
   tags = {
-    Name = "private-${count.index}"
+    Name = "private-subnet${count.index}"
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
     "kubernetes.io/role/internal-elb"          = "1"
   }
