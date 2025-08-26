@@ -1,5 +1,5 @@
 resource "aws_s3_bucket" "s3_bucket" {
-  bucket = "my-tf-bucket-${var.account_id}"
+  bucket = "my-backend-bucket-34572630948302531413"
 
   tags = {
     Name = "My-bucket"
