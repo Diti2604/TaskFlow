@@ -47,9 +47,9 @@ resource "aws_apigatewayv2_route" "proxy_any" {
 }
 
 
-resource "aws_apigatewayv2_stage" "prod" {
-  api_id      = aws_apigatewayv2_api.http.id
-  name        = "prod"
-  auto_deploy = true
-}
+# resource "aws_apigatewayv2_stage" "prod" {
+#   api_id      = aws_apigatewayv2_api.http.id
+#   name        = "prod"
+#   auto_deploy = true
+# }
 
