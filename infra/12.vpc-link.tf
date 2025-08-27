@@ -1,6 +1,5 @@
 data "aws_lb" "test" {
   tags = {
-    "kubernetes.io/ingress.name" = "fastapi-ingress"
     "alb.ingress.kubernetes.io/certificate-arn" = aws_acm_certificate.cert-base.arn
   }
 }
