@@ -79,3 +79,35 @@ resource "helm_release" "aws_lb_controller" {
     }
   })]
 }
+
+
+resource "null_resource" "wait_for_alb" {
+  # re-run if the Ingress changes
+  triggers = {
+    ingress_gen = kubernetes_ingress_v1.fastapi.metadata[0].generation
+  }
+
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+    command = <<EOT
+      set -euo pipefail
+      NS="default"
+      ING="fastapi-ingress"
+      ATTEMPTS=60
+      SLEEP=10
+
+for i in $(seq 1 $ATTEMPTS); do
+  H=$(kubectl -n "$NS" get ingress "$ING" -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
+  if [[ -n "$H" ]]; then
+    echo "ALB is ready: $H"
+    exit 0
+  fi
+  echo "Waiting for ALB (attempt $i/$ATTEMPTS)..."
+  sleep $SLEEP
+done
+
+echo "Timeout waiting for ALB hostname on Ingress/$NS/$ING"
+exit 1
+EOT
+  }
+}
