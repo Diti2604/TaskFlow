@@ -36,13 +36,13 @@ resource "aws_apigatewayv2_route" "root_any" {
 
 resource "aws_apigatewayv2_route" "health_get" {
   api_id    = aws_apigatewayv2_api.http.id
-  route_key = "ANY /users"
+  route_key = "POST /users"
   target    = "integrations/${aws_apigatewayv2_integration.api-gateway-integration.id}"
 }
 
 resource "aws_apigatewayv2_route" "proxy_any" {
   api_id    = aws_apigatewayv2_api.http.id
-  route_key = "ANY /login"
+  route_key = "POST /login"
   target    = "integrations/${aws_apigatewayv2_integration.api-gateway-integration.id}"
 }
 
