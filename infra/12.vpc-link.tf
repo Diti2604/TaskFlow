@@ -1,6 +1,5 @@
 data "aws_lb" "ingress_alb" {
   tags = {
-     Name = "private-subnet-${count.index}"
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
     "kubernetes.io/role/internal-elb"          = "1"
   }
