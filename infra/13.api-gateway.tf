@@ -1,5 +1,4 @@
 data "aws_lb" "ingress_alb" {
-    depends_on = [ null_resource.wait_for_alb ]
   tags = {
     "app"                          = "fastapi"
     "elbv2.k8s.aws/cluster"        = "cluster1"
@@ -12,7 +11,6 @@ data "aws_lb" "ingress_alb" {
 }
 
 data "aws_lb_listener" "http" {
-  depends_on = [ null_resource.wait_for_alb ]
   load_balancer_arn = data.aws_lb.ingress_alb.arn
   port              = 80
 }
