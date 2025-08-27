@@ -6,6 +6,7 @@ data "aws_lb" "ingress_alb" {
     "elbv2.k8s.aws/cluster"        = "cluster1"
     "ingress-name"                 = "fastapi-ingress"
     "ingress.k8s.aws/stack"        = "default/fastapi-ingress"
+    "ingress.k8s.aws/resource"   = "LoadBalancer" 
   }
 }
 
