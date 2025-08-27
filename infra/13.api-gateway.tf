@@ -30,7 +30,7 @@ resource "aws_apigatewayv2_integration" "api-gateway-integration" {
 
 resource "aws_apigatewayv2_route" "root_any" {
   api_id    = aws_apigatewayv2_api.http.id
-  route_key = "ANY /"
+  route_key = "GET /"
   target    = "integrations/${aws_apigatewayv2_integration.api-gateway-integration.id}"
 }
 
