@@ -1,6 +1,6 @@
 data "aws_lb" "test" {
   tags = {
-      name = "k8s-default-fastapii-023c11cd46"
+      "name" = "k8s-default-fastapii-023c11cd46"
   }
 }
 
