@@ -1,8 +1,17 @@
+
 data "aws_lb" "ingress_alb" {
+  load_balancer_type = "application"
   tags = {
-    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
-    "kubernetes.io/role/internal-elb"          = "1"
+    "app"                          = "fastapi"
+    "elbv2.k8s.aws/cluster"        = "cluster1"
+    "ingress-name"                 = "fastapi-ingress"
+    "ingress.k8s.aws/stack"        = "default/fastapi-ingress"
   }
+}
+
+data "aws_lb_listener" "https" {
+  load_balancer_arn = data.aws_lb.ingress_alb.arn
+  port              = 443
 }
 
 resource "aws_apigatewayv2_api" "http" {
