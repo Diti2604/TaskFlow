@@ -1,6 +1,5 @@
 
 data "aws_lb" "ingress_alb" {
-  load_balancer_type = "application"
   tags = {
     "app"                          = "fastapi"
     "elbv2.k8s.aws/cluster"        = "cluster1"
