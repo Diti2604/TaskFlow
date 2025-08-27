@@ -1,10 +1,6 @@
 data "aws_lb" "test" {
   tags = {
-      "kubernetes.io/ingress.class"            = "alb"
-      "alb.ingress.kubernetes.io/scheme"        = "internal"
-      "alb.ingress.kubernetes.io/listen-ports"  = "[{\"HTTP\":80},{\"HTTPS\":443}]"
-      "alb.ingress.kubernetes.io/certificate-arn" = aws_acm_certificate.cert-base.arn
-      "alb.ingress.kubernetes.io/target-type"   = "ip"
+      name = "k8s-default-fastapii-023c11cd46"
   }
 }
 
