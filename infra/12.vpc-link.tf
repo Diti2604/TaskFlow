@@ -1,4 +1,11 @@
-
+data "aws_lb" "ingress_alb" {
+  tags = {
+    "app"          = "fastapi"
+    "env"          = "dev"
+    "ingress-name" = "fastapi-ingress"
+    "ingress-ns"   = "default"
+  }
+}
 resource "aws_apigatewayv2_api" "http" {
   name          = "http-api"
   protocol_type = "HTTP"
@@ -18,6 +25,6 @@ resource "aws_apigatewayv2_integration" "to_alb" {
   connection_type        = "VPC_LINK"
   connection_id          = aws_apigatewayv2_vpc_link.link.id
   integration_method     = "ANY"
-  integration_uri        = data.aws_lb_listener.https.arn
+  integration_uri        = data.aws_lb.ingress_alb.arn
   payload_format_version = "1.0"
 }
