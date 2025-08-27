@@ -9,8 +9,8 @@ load_dotenv()
 
 app = FastAPI()
 
-SECRET_NAME=os.getenv('SECRET_NAME')
-DATABASE_ENDPOINT=os.getenv('DATABASE_ENDPOINT')
+SECRET_NAME=os.getenv('rds!db-ea3da7e7-41b3-47ef-b694-d1aab3a7ebe3')
+DATABASE_ENDPOINT=os.getenv('terraform-20250827074154081300000006.cfr8j6vjvsmt.us-east-1.rds.amazonaws.com')
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
