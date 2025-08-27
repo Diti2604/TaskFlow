@@ -8,9 +8,9 @@ data "aws_lb" "ingress_alb" {
   }
 }
 
-data "aws_lb_listener" "https" {
+data "aws_lb_listener" "http" {
   load_balancer_arn = data.aws_lb.ingress_alb.arn
-  port              = 443
+  port              = 80
 }
 
 resource "aws_apigatewayv2_api" "http" {
@@ -24,32 +24,32 @@ resource "aws_apigatewayv2_integration" "api-gateway-integration" {
   connection_type        = "VPC_LINK"
   connection_id          = aws_apigatewayv2_vpc_link.link.id
   integration_method     = "ANY"
-  integration_uri        = data.aws_lb_listener.https.arn
+  integration_uri        = data.aws_lb_listener.http.arn
   payload_format_version = "1.0"
 }
 
-resource "aws_apigatewayv2_route" "root_any" {
+resource "aws_apigatewayv2_route" "root" {
   api_id    = aws_apigatewayv2_api.http.id
   route_key = "GET /"
   target    = "integrations/${aws_apigatewayv2_integration.api-gateway-integration.id}"
 }
 
-resource "aws_apigatewayv2_route" "health_get" {
+resource "aws_apigatewayv2_route" "users_post" {
   api_id    = aws_apigatewayv2_api.http.id
   route_key = "POST /users"
   target    = "integrations/${aws_apigatewayv2_integration.api-gateway-integration.id}"
 }
 
-resource "aws_apigatewayv2_route" "proxy_any" {
+resource "aws_apigatewayv2_route" "login_post" {
   api_id    = aws_apigatewayv2_api.http.id
   route_key = "POST /login"
   target    = "integrations/${aws_apigatewayv2_integration.api-gateway-integration.id}"
 }
 
 
-# resource "aws_apigatewayv2_stage" "prod" {
-#   api_id      = aws_apigatewayv2_api.http.id
-#   name        = "prod"
-#   auto_deploy = true
-# }
+resource "aws_apigatewayv2_stage" "default-stage" {
+  api_id      = aws_apigatewayv2_api.http.id
+  name        = "$default"
+  auto_deploy = true
+}
 
