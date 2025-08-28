@@ -146,18 +146,44 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-            node-version: '20'
-      - name: Install dependencies
-        working-directory: frontend/my-react-app
+      - name: Detect app directory
+        id: detect
+        shell: bash
         run: |
-          if [ -f package-lock.json ]; then
-          npm ci
-          else
-          npm install
+          set -euo pipefail
+          APP_DIR=""
+          for d in "frontend/my-react-app" "my-react-app"; do
+            if [[ -d "$d" && -f "$d/package.json" ]]; then
+              APP_DIR="$d"
+              break
+            fi
+          done
+          if [[ -z "${APP_DIR}" ]]; then
+            # Fallback: search up to 4 levels deep
+            found="$(find . -maxdepth 4 -type d -name my-react-app -print -quit || true)"
+            if [[ -n "$found" && -f "$found/package.json" ]]; then
+              APP_DIR="${found#./}"
+            fi
           fi
+          if [[ -z "${APP_DIR}" ]]; then
+            echo "❌ Could not locate my-react-app with a package.json" >&2
+            exit 1
+          fi
+          echo "✅ Using app dir: $APP_DIR"
+          echo "app_dir=$APP_DIR" >> "$GITHUB_OUTPUT"
+          echo "build_dir=$APP_DIR/build" >> "$GITHUB_OUTPUT"
+          - name: Setup Node.js
+            uses: actions/setup-node@v4
+            with:
+                node-version: '20'
+          - name: Install dependencies
+            working-directory: frontend/my-react-app
+            run: |
+              if [ -f package-lock.json ]; then
+              npm ci
+              else
+              npm install
+              fi
 
       - name: Build project
         working-directory: frontend/my-react-app
