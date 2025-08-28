@@ -170,7 +170,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Sync files to S3
-        run: aws s3 sync frontend/my-react-app/build s3://${{ secrets.S3_BUCKET_NAME }} --delete
+        run: aws s3 sync frontend/my-react-app s3://${{ secrets.S3_BUCKET_NAME }} --delete --exclude "node_modules/*" --exclude "package*.json" --exclude ".git/*" --exclude "public/*" --exclude "src/*"
         env:
           S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
 
