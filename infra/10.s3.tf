@@ -13,6 +13,16 @@ resource "aws_s3_bucket_website_configuration" "site" {
   error_document { key    = "error.html" }
 }
 
+
+
+resource "aws_s3_bucket_public_access_block" "site" {
+  bucket                  = aws_s3_bucket.s3_bucket.id
+  block_public_acls       = false
+  ignore_public_acls      = false
+  block_public_policy     = false
+  restrict_public_buckets = false
+}
+
 resource "aws_s3_bucket_policy" "site_public" {
   bucket = aws_s3_bucket.s3_bucket.id
   policy = jsonencode({
@@ -24,13 +34,4 @@ resource "aws_s3_bucket_policy" "site_public" {
       Resource  = "${aws_s3_bucket.s3_bucket.arn}/*"
     }]
   })
-}
-
-
-resource "aws_s3_bucket_public_access_block" "site" {
-  bucket                  = aws_s3_bucket.s3_bucket.id
-  block_public_acls       = false
-  ignore_public_acls      = false
-  block_public_policy     = false
-  restrict_public_buckets = false
 }
