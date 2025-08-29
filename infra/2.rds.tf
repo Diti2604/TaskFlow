@@ -22,15 +22,3 @@ resource "aws_db_instance" "database-1" {
   depends_on = [ aws_vpc.my-vpc ]
   
 }
-
-
-provider "mysql" {
-  endpoint = "${aws_db_instance.database-1.endpoint}"
-  username = "${aws_db_instance.database-1.username}"
-  password = "${aws_db_instance.database-1.password}"
-}
-
-
-resource "mysql_database" "app" {
-  name = "database_1"
-}
