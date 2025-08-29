@@ -21,14 +21,15 @@ resource "kubernetes_deployment" "example" {
           app = "fastapi"
         }
       }
-
       spec {
         container {
-          image = "${ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/fastapi-app}:latest"
+          image = "${var.account_id}.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:latest"
+      
           name  = "fastapi"
           port {
             container_port = 8000
           }
+          image_pull_policy = "Always"
         }
       }
     }

@@ -124,10 +124,10 @@ jobs:
         id: img
         run: |
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-      - name: Ensure deployment/service exist
-        run: |
-          kubectl apply -f k8s/deployment.yaml 
-          kubectl apply -f k8s/service.yaml
+      # - name: Ensure deployment/service exist
+      #   run: |
+      #     # kubectl apply -f k8s/deployment.yaml 
+      #     # kubectl apply -f k8s/service.yaml
 
 
 
