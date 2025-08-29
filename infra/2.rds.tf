@@ -23,3 +23,32 @@ resource "aws_db_instance" "database-1" {
   
 }
 
+
+provider "mysql" {
+  endpoint = aws_db_instance.database-1.address
+  username = aws_db_instance.database-1.username
+  password = aws_db_instance.database-1.password
+}
+
+resource "mysql_database" "app_db" {
+  name     = aws_db_instance.database-1.name
+  host     = aws_db_instance.database-1.address
+  username = aws_db_instance.database-1.username
+  password = aws_db_instance.database-1.password
+}
+
+resource "mysql_table" "my_table" {
+  database = mysql_database.app_db.name
+  name     = "my_table"
+  columns {
+    name = "id"
+    type = "INT PRIMARY KEY"
+  }
+  columns {
+    name = "name"
+    type = "VARCHAR(255)"
+  }
+  host     = aws_db_instance.database-1.address
+  username = aws_db_instance.database-1.username
+  password = aws_db_instance.database-1.password
+}

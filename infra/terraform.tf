@@ -4,7 +4,14 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.0"
     }
-    
+    mysql = {
+      source  = "petoju/mysql" 
+      version = "~> 3.0" 
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.38"
+    }
   }
   backend "s3" {
      bucket = "my-s3-bucket-058264477174"
