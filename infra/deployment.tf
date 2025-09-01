@@ -1,4 +1,4 @@
-resource "kubernetes_deployment" "example" {
+resource "kubernetes_deployment" "fastapi" {
   metadata {
     name = "fastapi-deployment"
     labels = {
@@ -21,15 +21,21 @@ resource "kubernetes_deployment" "example" {
           app = "fastapi"
         }
       }
+
       spec {
         container {
-          image = "${var.account_id}.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:latest"
-      
-          name  = "fastapi"
+          name              = "fastapi"
+          image             = "${var.account_id}.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:latest"
+          image_pull_policy = "Always"
+          resources {
+              limits = {
+              cpu    = "500m"
+              memory = "512Mi"
+            }
+          }
           port {
             container_port = 8000
           }
-          image_pull_policy = "Always"
         }
       }
     }
