@@ -20,7 +20,7 @@ resource "aws_db_instance" "database-1" {
   skip_final_snapshot           = true
   apply_immediately             = true
   depends_on = [ aws_vpc.my-vpc ]
-  provisioner "local-exec" {
-    command = "mysql -h terraform-20250902083712061100000001.cmyqbosgwrba.us-east-1.rds.amazonaws.com -u admin -p MwnC!FMjkU4o?cyk(oi6Zn[4tC-( < rds_sql_scripts.sql"
-  }
+  # provisioner "local-exec" {
+  #   command = "mysql -h terraform-20250902083712061100000001.cmyqbosgwrba.us-east-1.rds.amazonaws.com -u admin -p MwnC!FMjkU4o?cyk(oi6Zn[4tC-( < rds_sql_scripts.sql"
+  # }
 }
