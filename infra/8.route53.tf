@@ -20,3 +20,10 @@ resource "aws_route53_record" "cert-validation" {
   type            = each.value.type
   zone_id = data.aws_route53_zone.main.zone_id
 }
+resource "aws_route53_record" "database" {
+  zone_id = data.aws_route53_zone.main.zone_id
+  name = "db.${var.account_id}.realhandsonlabs.net"
+  type = "CNAME"
+  ttl = "300"
+  records = ["${aws_db_instance.database-1.address}"]
+}

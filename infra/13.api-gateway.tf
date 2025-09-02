@@ -6,11 +6,14 @@ data "aws_lb" "ingress_alb" {
     "ingress.k8s.aws/stack"        = "default/fastapi-ingress"
     "ingress.k8s.aws/resource"   = "LoadBalancer" 
   }
-
-
+  depends_on = [ kubernetes_ingress_v1.fastapi , helm_release.aws_lb_controller]
+  timeouts {
+    read = "15m"
+  }
 }
 
 data "aws_lb_listener" "http" {
+  depends_on = [ data.aws_lb.ingress_alb ]
   load_balancer_arn = data.aws_lb.ingress_alb.arn
   port              = 80
 }
@@ -22,6 +25,7 @@ resource "aws_apigatewayv2_api" "http" {
 }
 
 resource "aws_apigatewayv2_integration" "api-gateway-integration" {
+  depends_on = [ data.aws_lb.ingress_alb ]
   api_id                 = aws_apigatewayv2_api.http.id
   integration_type       = "HTTP_PROXY"
   connection_type        = "VPC_LINK"
@@ -32,18 +36,21 @@ resource "aws_apigatewayv2_integration" "api-gateway-integration" {
 }
 
 resource "aws_apigatewayv2_route" "root" {
+  depends_on = [ data.aws_lb.ingress_alb ]
   api_id    = aws_apigatewayv2_api.http.id
   route_key = "GET /"
   target    = "integrations/${aws_apigatewayv2_integration.api-gateway-integration.id}"
 }
 
 resource "aws_apigatewayv2_route" "users_post" {
+  depends_on = [ data.aws_lb.ingress_alb ]
   api_id    = aws_apigatewayv2_api.http.id
   route_key = "POST /users"
   target    = "integrations/${aws_apigatewayv2_integration.api-gateway-integration.id}"
 }
 
 resource "aws_apigatewayv2_route" "login_post" {
+  depends_on = [ data.aws_lb.ingress_alb ]
   api_id    = aws_apigatewayv2_api.http.id
   route_key = "POST /login"
   target    = "integrations/${aws_apigatewayv2_integration.api-gateway-integration.id}"
@@ -51,6 +58,7 @@ resource "aws_apigatewayv2_route" "login_post" {
 
 
 resource "aws_apigatewayv2_stage" "default-stage" {
+  depends_on = [ data.aws_lb.ingress_alb ]
   api_id      = aws_apigatewayv2_api.http.id
   name        = "$default"
   auto_deploy = true

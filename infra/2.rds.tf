@@ -20,5 +20,29 @@ resource "aws_db_instance" "database-1" {
   skip_final_snapshot           = true
   apply_immediately             = true
   depends_on = [ aws_vpc.my-vpc ]
-  
+   timeouts {
+    create = "5m"
+  }
 }
+# resource "null_resource" "init_db" {
+#   depends_on = [aws_db_instance.database-1]
+
+#   triggers = {
+#     endpoint = aws_db_instance.database-1.address  
+#     db_name  = "database_1"
+#   }
+
+#   provisioner "local-exec" {
+#     interpreter = ["/bin/bash", "-c"]
+#     command = <<-EOT
+#       set -euo pipefail
+
+#       HOST="${aws_db_instance.database-1.address}"
+#       PORT="${aws_db_instance.database-1.port}"
+#       USER="admin"
+#       PASS="$(aws secretsmanager get-secret-value --secret-id ${aws_db_instance.database-1.master_user_secret[0].secret_arn} --query SecretString --output text)"
+#       echo "Applying schema..."
+#       mysql -h "$HOST" -P "$PORT" -u "$USER" -p"$PASS" < "${path.module}/rds_sql_scripts.sql"
+#     EOT
+#   }
+# }

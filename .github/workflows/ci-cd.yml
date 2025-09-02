@@ -123,11 +123,9 @@ jobs:
       - name: Apply Deployment and Service
         id: img
         run: |
-          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-      # - name: Ensure deployment/service exist
-      #   run: |
-      #     # kubectl apply -f k8s/deployment.yaml 
-      #     # kubectl apply -f k8s/service.yaml
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)    
+          kubectl apply -f k8s/deployment.yaml 
+          kubectl apply -f k8s/service.yaml
 
 
 
@@ -140,37 +138,37 @@ jobs:
       #   run: |
       #     kubectl -n "$K8S_NAMESPACE" set image deploy/fastapi-deployment fastapi=${{ steps.img.outputs.uri }}
           
-  deploy-to-s3:
-    runs-on: ubuntu-latest
-    needs: terraform
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # deploy-to-s3:
+  #   runs-on: ubuntu-latest
+  #   needs: terraform
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
 
-      - name: Install dependencies
-        working-directory: frontend/my-react-app
-        run: npm install
+  #     - name: Install dependencies
+  #       working-directory: frontend/my-react-app
+  #       run: npm install
 
-      - name: Build project
-        working-directory: frontend/my-react-app
-        run: npm run build
+  #     - name: Build project
+  #       working-directory: frontend/my-react-app
+  #       run: npm run build
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+  #     - name: Configure AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: us-east-1
 
-      - name: Sync files to S3
-        run: aws s3 sync frontend/my-react-app s3://${{ secrets.S3_BUCKET_NAME }} --delete --exclude "node_modules/*" --exclude "package*.json" --exclude ".git/*" --exclude "public/*" --exclude "src/*"
-        env:
-          S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+  #     - name: Sync files to S3
+  #       run: aws s3 sync frontend/my-react-app s3://${{ secrets.S3_BUCKET_NAME }} --delete --exclude "node_modules/*" --exclude "package*.json" --exclude ".git/*" --exclude "public/*" --exclude "src/*"
+  #       env:
+  #         S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
 
 
 

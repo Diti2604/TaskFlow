@@ -43,48 +43,48 @@ provider "helm" {
     token                  = data.aws_eks_cluster_auth.cluster1.token
   }
 }
-resource "aws_eks_access_entry" "eks-access-entry" {
-  cluster_name      = aws_eks_cluster.cluster1.name
-  principal_arn     = aws_iam_role.CODEBUILD-ROLE.arn
-  type              = "STANDARD"
-}
+# resource "aws_eks_access_entry" "eks-access-entry" {
+#   cluster_name      = aws_eks_cluster.cluster1.name
+#   principal_arn     = aws_iam_role.CODEBUILD-ROLE.arn
+#   type              = "STANDARD"
+# }
 
-resource "aws_eks_access_policy_association" "eks-access-admin-policy" {
-  cluster_name  = aws_eks_cluster.cluster1.name
-  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminPolicy"
-  principal_arn = aws_iam_role.CODEBUILD-ROLE.arn
+# resource "aws_eks_access_policy_association" "eks-access-admin-policy" {
+#   cluster_name  = aws_eks_cluster.cluster1.name
+#   policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminPolicy"
+#   principal_arn = aws_iam_role.CODEBUILD-ROLE.arn
 
-  access_scope {
-    type       = "cluster"
-  }
-}
-resource "aws_eks_access_policy_association" "eks-access-admin-view-policy" {
-  cluster_name  = aws_eks_cluster.cluster1.name
-  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminViewPolicy"
-  principal_arn = aws_iam_role.CODEBUILD-ROLE.arn
+#   access_scope {
+#     type       = "cluster"
+#   }
+# }
+# resource "aws_eks_access_policy_association" "eks-access-admin-view-policy" {
+#   cluster_name  = aws_eks_cluster.cluster1.name
+#   policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminViewPolicy"
+#   principal_arn = aws_iam_role.CODEBUILD-ROLE.arn
 
-  access_scope {
-    type       = "cluster"
-  }
-}
-resource "aws_eks_access_policy_association" "eks-access-view-policy" {
-  cluster_name  = aws_eks_cluster.cluster1.name
-  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy"
-  principal_arn = aws_iam_role.CODEBUILD-ROLE.arn
+#   access_scope {
+#     type       = "cluster"
+#   }
+# }
+# resource "aws_eks_access_policy_association" "eks-access-view-policy" {
+#   cluster_name  = aws_eks_cluster.cluster1.name
+#   policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy"
+#   principal_arn = aws_iam_role.CODEBUILD-ROLE.arn
 
-  access_scope {
-    type       = "cluster"
-  }
-}
-resource "aws_eks_access_policy_association" "eks-access-cluster-admin-policy" {
-  cluster_name  = aws_eks_cluster.cluster1.name
-  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-  principal_arn = aws_iam_role.CODEBUILD-ROLE.arn
+#   access_scope {
+#     type       = "cluster"
+#   }
+# }
+# resource "aws_eks_access_policy_association" "eks-access-cluster-admin-policy" {
+#   cluster_name  = aws_eks_cluster.cluster1.name
+#   policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+#   principal_arn = aws_iam_role.CODEBUILD-ROLE.arn
 
-  access_scope {
-    type       = "cluster"
-  }
-}
+#   access_scope {
+#     type       = "cluster"
+#   }
+# }
 
 resource "aws_eks_addon" "addon-1" {
   cluster_name = aws_eks_cluster.cluster1.name
