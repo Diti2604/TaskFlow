@@ -1,6 +1,10 @@
 data "aws_lb" "ingress_alb" {
   tags = {
-    "ingress-name" = "fastapi-ingress"
+    "app"                          = "fastapi"
+    "elbv2.k8s.aws/cluster"        = "cluster1"
+    "ingress-name"                 = "fastapi-ingress"
+    "ingress.k8s.aws/stack"        = "default/fastapi-ingress"
+    "ingress.k8s.aws/resource"   = "LoadBalancer" 
   }
   depends_on = [ kubernetes_ingress_v1.fastapi , helm_release.aws_lb_controller]
   timeouts {
