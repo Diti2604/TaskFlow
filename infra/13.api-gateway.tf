@@ -7,6 +7,9 @@ data "aws_lb" "ingress_alb" {
     "ingress.k8s.aws/resource"   = "LoadBalancer" 
   }
   depends_on = [ kubernetes_ingress_v1.fastapi ]
+  timeouts {
+    read = "5m"
+  }
 }
 
 data "aws_lb_listener" "http" {
