@@ -2,7 +2,7 @@
 variable "account_id" {
   type        = string
   description = "Account ID of new playgrounds"
-  default     = "211125687547"
+  default     = "992382667543"
 }
 
 
