@@ -6,6 +6,7 @@ data "aws_lb" "ingress_alb" {
     "ingress.k8s.aws/stack"        = "default/fastapi-ingress"
     "ingress.k8s.aws/resource"   = "LoadBalancer" 
   }
+  depends_on = [ kubernetes_ingress_v1.fastapi ]
 }
 
 data "aws_lb_listener" "http" {
