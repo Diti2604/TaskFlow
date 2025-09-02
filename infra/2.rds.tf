@@ -28,7 +28,7 @@ resource "null_resource" "init_db" {
   depends_on = [aws_db_instance.db]
 
   triggers = {
-    endpoint = aws_db_instance.db.address  
+    endpoint = aws_db_instance.database-1.address  
     db_name  = "database_1"
   }
 
@@ -37,8 +37,8 @@ resource "null_resource" "init_db" {
     command = <<-EOT
       set -euo pipefail
 
-      HOST="${aws_db_instance.db.address}"
-      PORT="${aws_db_instance.db.port}"
+      HOST="${aws_db_instance.database-1.address}"
+      PORT="${aws_db_instance.database-1.port}"
       USER="admin"
       PASS="$(aws secretsmanager get-secret-value --secret-id ${aws_kms_key.secrets-manager-password.arn} --query SecretString --output text)"
       echo "Applying schema..."
