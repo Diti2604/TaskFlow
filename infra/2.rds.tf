@@ -20,9 +20,9 @@ resource "aws_db_instance" "database-1" {
   skip_final_snapshot           = true
   apply_immediately             = true
   depends_on = [ aws_vpc.my-vpc ]
-   timeouts {
-    create = "5m"
-  }
+  #  timeouts {
+  #   create = "5m"
+  # }
 }
 # resource "null_resource" "init_db" {
 #   depends_on = [aws_db_instance.database-1]
