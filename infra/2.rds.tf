@@ -20,7 +20,29 @@ resource "aws_db_instance" "database-1" {
   skip_final_snapshot           = true
   apply_immediately             = true
   depends_on = [ aws_vpc.my-vpc ]
+   timeouts {
+    create = "5m"
+  }
+}
+resource "null_resource" "init_db" {
+  depends_on = [aws_db_instance.db]
+
+  triggers = {
+    endpoint = aws_db_instance.db.address  
+    db_name  = "database_1"
+  }
+
   provisioner "local-exec" {
-    command = "mysql -h terraform-20250902092116487000000006.c704wic8cq4s.us-east-1.rds.amazonaws.com -u admin -p 1|li5XZ<!~v:|(AEgM6H.:sQ_dxu < rds_sql_scripts.sql"
+    interpreter = ["/bin/bash", "-c"]
+    command = <<-EOT
+      set -euo pipefail
+
+      HOST="${aws_db_instance.db.address}"
+      PORT="${aws_db_instance.db.port}"
+      USER="admin"
+      PASS="$(aws secretsmanager get-secret-value --secret-id ${aws_kms_key.secrets-manager-password.arn} --query SecretString --output text)"
+      echo "Applying schema..."
+      mysql -h "$HOST" -P "$PORT" -u "$USER" -p"$PASS" < "${path.module}/rds_sql_scripts.sql"
+    EOT
   }
 }
