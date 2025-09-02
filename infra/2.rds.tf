@@ -25,7 +25,7 @@ resource "aws_db_instance" "database-1" {
   }
 }
 resource "null_resource" "init_db" {
-  depends_on = [aws_db_instance.db]
+  depends_on = [aws_db_instance.database-1]
 
   triggers = {
     endpoint = aws_db_instance.database-1.address  
