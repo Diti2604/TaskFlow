@@ -40,7 +40,7 @@ resource "null_resource" "init_db" {
       HOST="${aws_db_instance.database-1.address}"
       PORT="${aws_db_instance.database-1.port}"
       USER="admin"
-      PASS="$(aws secretsmanager get-secret-value --secret-id ${aws_kms_key.secrets-manager-password.arn} --query SecretString --output text)"
+      PASS="$(aws secretsmanager get-secret-value --secret-id ${aws_db_instance.database-1.master_user_secret[0].secret_arn} --query SecretString --output text)"
       echo "Applying schema..."
       mysql -h "$HOST" -P "$PORT" -u "$USER" -p"$PASS" < "${path.module}/rds_sql_scripts.sql"
     EOT
