@@ -55,36 +55,36 @@ resource "null_resource" "alb_ready_gate" {
     listener_arn = data.aws_lb_listener.http.arn
   }
 
-  provisioner "local-exec" {
-    command = <<EOT
-      set -e
-      echo "Waiting for ALB to be available..."
-      aws elbv2 wait load-balancer-available --load-balancer-arns ${data.aws_lb.ingress_alb.arn} --region ${var.aws_region}
-
-      echo "Checking target group health..."
-      TG_ARN=$(aws elbv2 describe-listeners --listener-arn ${data.aws_lb_listener.http.arn} --region ${var.aws_region} \
-        --query 'Listeners[0].DefaultActions[0].TargetGroupArn' --output text)
-
-      start_time=$(date +%s)
-      while true; do
-        healthy=$(aws elbv2 describe-target-health --target-group-arn $TG_ARN --region ${var.aws_region} \
-          --query 'TargetHealthDescriptions[?TargetHealth.State==`healthy`]' --output json | jq length)
-        if [ \"$healthy\" -ge 1 ]; then
-          echo \"At least one target is healthy.\"
-          break
-        fi
-        now=$(date +%s)
-        elapsed=$((now - start_time))
-        if [ \"$elapsed\" -ge ${var.max_wait_seconds} ]; then
-          echo \"Timeout waiting for healthy targets.\"
-          exit 1
-        fi
-        echo \"Waiting for healthy targets... ($elapsed/${var.max_wait_seconds}s)\"
-        sleep 10
-      done
-    EOT
-    interpreter = ["bash", "-c"]
-  }
+provisioner "local-exec" {
+  command = <<-EOT
+    set -e
+    echo "Waiting for ALB to be available..."
+    aws elbv2 wait load-balancer-available --load-balancer-arns ${data.aws_lb.ingress_alb.arn} --region ${var.aws_region}
+    
+    echo "Checking target group health..."
+    TG_ARN=$(aws elbv2 describe-listeners --listener-arn ${data.aws_lb_listener.http.arn} --region ${var.aws_region} \
+      --query 'Listeners[0].DefaultActions[0].TargetGroupArn' --output text)
+    
+    start_time=$(date +%s)
+    while true; do
+      healthy=$(aws elbv2 describe-target-health --target-group-arn $TG_ARN --region ${var.aws_region} \
+        --query 'TargetHealthDescriptions[?TargetHealth.State==`healthy`]' --output json | jq length)
+      if [ "$healthy" -ge 1 ]; then
+        echo "At least one target is healthy."
+        break
+      fi
+      now=$(date +%s)
+      elapsed=$((now - start_time))
+      if [ "$elapsed" -ge ${var.max_wait_seconds} ]; then
+        echo "Timeout waiting for healthy targets."
+        exit 1
+      fi
+      echo "Waiting for healthy targets... ($elapsed/${var.max_wait_seconds}s)"
+      sleep 10
+    done
+  EOT
+  interpreter = ["bash", "-c"]
+}
 }
 
 resource "aws_apigatewayv2_api" "http" {
