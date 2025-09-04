@@ -1,25 +1,52 @@
+data "aws_resourcegroupstaggingapi_resources" "ingress_alb" {
+  resource_type_filters = ["elasticloadbalancing:loadbalancer"]
+
+  # Controller tags (canonical)
+  tag_filter {
+    key    = "elbv2.k8s.aws/cluster"
+    values = [var.cluster_name]
+  }
+  tag_filter {
+    key    = "ingress.k8s.aws/stack"
+    values = ["${kubernetes_ingress_v1.fastapi.metadata[0].namespace}/${kubernetes_ingress_v1.fastapi.metadata[0].name}"]
+  }
+  tag_filter {
+    key    = "ingress.k8s.aws/resource"
+    values = ["LoadBalancer"]
+  }
+
+  # Your custom tags (from alb.ingress.kubernetes.io/tags)
+  tag_filter {
+    key    = "app"
+    values = ["fastapi"]
+  }
+  tag_filter {
+    key    = "ingress-name"   # <-- fixed
+    values = ["fastapi-ingress"]
+  }
+
+  depends_on = [
+    helm_release.aws_lb_controller,
+    kubernetes_ingress_v1.fastapi
+  ]
+}
+
+locals {
+  ingress_alb_arn = one([for m in data.aws_resourcegroupstaggingapi_resources.ingress_alb.resource_tag_mapping_list : m.resource_arn])
+}
+
 data "aws_lb" "ingress_alb" {
-  tags = {
-    "elbv2.k8s.aws/cluster"        = var.cluster_name
-    "ingress.k8s.aws/stack"        = "default/${kubernetes_ingress_v1.fastapi.metadata[0].name}" 
-    "app"                          = "fastapi"
-    "ingress-name"                 = "fastapi-ingress"
-  }
-  depends_on = [kubernetes_ingress_v1.fastapi, helm_release.aws_lb_controller]
-  timeouts {
-    read = "15m"
-  }
+  arn = local.ingress_alb_arn
+  timeouts { read = "15m" }
+  depends_on = [data.aws_resourcegroupstaggingapi_resources.ingress_alb]
 }
 
 data "aws_lb_listener" "http" {
   load_balancer_arn = data.aws_lb.ingress_alb.arn
   port              = 80
-  depends_on        = [data.aws_lb.ingress_alb]
-  timeouts {
-    read = "15m"
-  }
+  timeouts { read = "15m" }
+  depends_on = [data.aws_lb.ingress_alb]
 }
-
 
 
 resource "null_resource" "alb_ready_gate" {
