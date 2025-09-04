@@ -2,7 +2,7 @@
 variable "account_id" {
   type        = string
   description = "Account ID of new playgrounds"
-  default     = "654654387145"
+  default     = "975050292135"
 }
 
 
@@ -117,4 +117,11 @@ variable "node_group_name" {
   type = string
   description = "Name of the nodegorup in EKS "
   default = "node-group-1"
+}
+
+
+variable "max_wait_seconds" {
+  description = "Max seconds to wait for ALB and targets to be healthy"
+  type        = number
+  default     = 600
 }
