@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y gcc default-libmysqlclient-dev
 
 WORKDIR /app
 
-COPY backend/requirements.txt .
+COPY . .
 
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
