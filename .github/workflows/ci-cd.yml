@@ -59,9 +59,58 @@ jobs:
             echo "Plan failed"; exit 1
           fi
 
-
       - name: Terraform Apply
         if: ${{ github.event_name == 'push' && steps.plan.outputs.exit_code == '2' }}
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform apply -auto-approve tfplan
+
+  tf-apigw:
+    if: github.event_name == 'push'
+    needs: terraform
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-east-1
+      TF_DIR: infra/apigw
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform init -upgrade
+
+      - name: Terraform Validate
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ${{ env.TF_DIR }}
+        shell: bash
+        run: |
+          set +e
+          terraform plan -input=false -detailed-exitcode -out=tfplan
+          code=$?
+          echo "exit_code=$code" >> $GITHUB_OUTPUT
+          set -e
+          if [ "$code" -eq 1 ]; then
+            echo "Plan failed"; exit 1
+          fi
+
+      - name: Terraform Apply
+        if: ${{ steps.plan.outputs.exit_code == '2' }}
         working-directory: ${{ env.TF_DIR }}
         run: terraform apply -auto-approve tfplan
 
