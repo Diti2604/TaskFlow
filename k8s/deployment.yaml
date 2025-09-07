@@ -1,22 +1,22 @@
-# apiVersion: apps/v1
-# kind: Deployment
-# metadata:
-#   name: fastapi-deployment
-#   labels:
-#     app: fastapi
-# spec:
-#   replicas: 2
-#   selector:
-#     matchLabels:
-#       app: fastapi
-#   template:
-#     metadata:
-#       labels:
-#         app: fastapi
-#     spec:
-#       containers:
-#         - name: fastapi
-#           image: 851725161858.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:latest
-#           imagePullPolicy: Always
-#           ports:
-#             - containerPort: 8000
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastapi-deployment
+  labels:
+    app: fastapi
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fastapi
+  template:
+    metadata:
+      labels:
+        app: fastapi
+    spec:
+      containers:
+        - name: fastapi
+          image: 992382716987.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
