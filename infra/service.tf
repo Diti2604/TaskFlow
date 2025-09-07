@@ -19,5 +19,5 @@ resource "kubernetes_service" "fastapi" {
       target_port = 8000
     }
   }
-  depends_on = [kubernetes_deployment.fastapi]
+  depends_on = [kubernetes_deployment_v1.fastapi]
 }

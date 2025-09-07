@@ -132,17 +132,6 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
         run: |
           terraform apply -auto-approve -var="docker_image_uri=${{ needs.build-and-push.outputs.image_uri }}"
-
-
-
-         # kubectl -n "$K8S_NAMESPACE" get deploy/fastapi-deployment || kubectl apply -n "$K8S_NAMESPACE" -f k8s/deployment.yaml
-          # kubectl -n "$K8S_NAMESPACE" get svc/fastapi-service || kubectl apply -n "$K8S_NAMESPACE" -f k8s/service.yaml
-          # envsubst '${IMAGE_TAG}' < deployment.yaml > deployment-final.yaml
-
-
-      # - name: Set image and roll out
-      #   run: |
-      #     kubectl -n "$K8S_NAMESPACE" set image deploy/fastapi-deployment fastapi=${{ steps.img.outputs.uri }}
           
   # deploy-to-s3:
   #   runs-on: ubuntu-latest
