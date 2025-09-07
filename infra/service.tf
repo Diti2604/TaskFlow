@@ -1,6 +1,7 @@
 resource "kubernetes_service" "fastapi" {
   metadata {
     name = "fastapi-service"
+    namespace = "default"
     labels = {
       app = "fastapi"
     }

@@ -1,7 +1,8 @@
 resource "kubernetes_deployment_v1" "fastapi" {
   metadata {
     name = "fastapi-deployment"
-    labels = {
+    namespace = "default"
+     labels = {
       app = "fastapi"
     }
   }
