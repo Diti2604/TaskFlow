@@ -91,11 +91,13 @@ jobs:
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           REPOSITORY_URI=$ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/fastapi-app
           IMAGE_TAG=latest
+          FULL_IMAGE_URI="$REPOSITORY_URI:$IMAGE_TAG"
 
-          docker build -t $REPOSITORY_URI:$IMAGE_TAG .
+          docker build -t $FULL_IMAGE_URI .
 
-          docker push $REPOSITORY_URI:$IMAGE_TAG
+          docker push $FULL_IMAGE_URI
 
+          echo "image_uri=$FULL_IMAGE_URI" >> $GITHUB_OUTPUT
           aws eks update-kubeconfig --region $AWS_REGION --name cluster1
 
   deploy:
@@ -122,12 +124,14 @@ jobs:
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --region "$AWS_REGION" --name "$EKS_CLUSTER"
 
-      - name: Apply Deployment and Service
-        id: img
+      - name: Terraform Init
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform init 
+
+      - name: Apply Kubernetes Deployment via Terraform
+        working-directory: ${{ env.TF_DIR }}
         run: |
-          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)    
-          kubectl apply -f k8s/deployment.yaml 
-          kubectl apply -f k8s/service.yaml
+          terraform apply -auto-approve -var="docker_image_uri=${{ needs.build-and-push.outputs.image_uri }}"
 
 
 
