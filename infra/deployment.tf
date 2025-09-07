@@ -25,7 +25,7 @@ resource "kubernetes_deployment_v1" "fastapi" {
       spec {
         container {
           name              = "fastapi"
-          image             = var.docker_image_uri
+          image             = "${var.account_id}.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:latest"
           image_pull_policy = "Always"
 
           port {

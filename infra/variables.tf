@@ -126,8 +126,8 @@ variable "max_wait_seconds" {
   default     = 600
 }
 
-variable "docker_image_uri" {
-  type        = string
-  description = "The full URI of the Docker image to deploy to the EKS cluster."
-  default     = "339712709499.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:latest"
-}
+# variable "docker_image_uri" {
+#   type        = string
+#   description = "The full URI of the Docker image to deploy to the EKS cluster."
+#   default     = "339712709499.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:latest"
+# }
