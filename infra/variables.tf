@@ -2,7 +2,13 @@
 variable "account_id" {
   type        = string
   description = "Account ID of new playgrounds"
-  default     = "992382716987"
+  default     = "730335657713"
+}
+
+variable "docker_image_uri" {
+  description = "The full URI of the Docker image to deploy to the EKS cluster."
+  type        = string
+  default     = "730335657713.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:latest"
 }
 
 
@@ -131,3 +137,9 @@ variable "max_wait_seconds" {
 #   description = "The full URI of the Docker image to deploy to the EKS cluster."
 #   default     = "339712709499.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:latest"
 # }
+
+
+variable "k8s_namespace" {
+  type    = string
+  default = "default"
+}
