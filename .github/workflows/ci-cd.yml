@@ -65,11 +65,14 @@ jobs:
         run: terraform apply -auto-approve tfplan
 
   build-and-push:
+    env: 
+      AWS_REGION: us-east-1
+      ECR_REGISTRY: 992382716987.dkr.ecr.us-east-1.amazonaws.com
+      ECR_REPO: fastapi-app
+
     if: github.event_name == 'push'
     needs: terraform
     runs-on: ubuntu-latest
-    outputs:
-      image_uri: ${{ steps.build.outputs.image_uri }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -87,14 +90,16 @@ jobs:
       - name: Build & Push image
         id: build
         run: |
-          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          REPOSITORY_URI=$ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/fastapi-app
-          IMAGE_TAG="${GITHUB_SHA}"
+          SHA=${GITHUB_SHA}
+          docker build -t $ECR_REGISTRY/$ECR_REPO:$SHA .
+          docker push $ECR_REGISTRY/$ECR_REPO:$SHA
+      - name: Update kubeconfig for EKS
+        run: aws eks update-kubeconfig --name <your-cluster-name> --region $AWS_REGION
 
-          docker build -t $REPOSITORY_URI:$IMAGE_TAG .
-
-          docker push $REPOSITORY_URI:$IMAGE_TAG
-          echo "image_uri=$REPOSITORY_URI:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+      - name: Set Deployment image to SHA tag
+        run: |
+          kubectl set image deployment/fastapi-deployment \
+            fastapi=$ECR_REGISTRY/$ECR_REPO:${GITHUB_SHA}
 
   deploy:
     if: github.event_name == 'push'
@@ -133,6 +138,7 @@ jobs:
           terraform plan \
             -var="docker_image_uri=${{ needs.build-and-push.outputs.image_uri }}" \
             -var="k8s_namespace=${{ env.K8S_NAMESPACE }}" \
+
             -input=false -detailed-exitcode -out=tfplan
           code=$?
           echo "exit_code=$code" >> $GITHUB_OUTPUT

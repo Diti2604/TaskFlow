@@ -8,7 +8,7 @@ variable "account_id" {
 variable "docker_image_uri" {
   description = "The full URI of the Docker image to deploy to the EKS cluster."
   type        = string
-  # default     = "730335657713.dkr.ecr.us-east-1.amazonaws.com/fastapi-app"
+  default     = "730335657713.dkr.ecr.us-east-1.amazonaws.com/fastapi-app"
 }
 
 
