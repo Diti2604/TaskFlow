@@ -2,13 +2,13 @@
 variable "account_id" {
   type        = string
   description = "Account ID of new playgrounds"
-  default     = "047431531039"
+  default     = "944103138569"
 }
 
 variable "docker_image_uri" {
   description = "The full URI of the Docker image to deploy to the EKS cluster."
   type        = string
-  default     = "047431531039.dkr.ecr.us-east-1.amazonaws.com/fastapi-app"
+  default     = "944103138569.dkr.ecr.us-east-1.amazonaws.com/fastapi-app"
 }
 
 
@@ -105,11 +105,6 @@ variable "db_name" {
   description = "Name of the database"
   default = "database_1"
 }
-variable "db_username" {
-  type = string
-  description = "Name of the username of the database"
-  default = "admin"
-}
 
 
 #EKS VARIABLES
@@ -142,4 +137,28 @@ variable "max_wait_seconds" {
 variable "k8s_namespace" {
   type    = string
   default = "default"
+}
+
+
+
+
+variable "instance_type" {
+  description = "EC2 instance type"
+  type        = string
+  default     = "t3.micro"
+}
+
+
+variable "db_username" {
+  description = "RDS master or DB user to connect as"
+  type        = string
+  default     = "admin"
+}
+
+
+
+variable "tags" {
+  description = "Common tags to apply"
+  type        = map(string)
+  default     = {}
 }

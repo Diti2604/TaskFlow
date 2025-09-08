@@ -1,33 +1,29 @@
-locals {
-  s3_origin_id = "myS3Origin"
-}
+# data "aws_iam_policy_document" "site_policy" {
+#   statement {
+#     actions   = ["s3:*"]
+#     resources = ["${aws_s3_bucket.s3_bucket.arn}/*"]
 
-data "aws_iam_policy_document" "site_policy" {
-  statement {
-    actions   = ["s3:*"]
-    resources = ["${aws_s3_bucket.s3_bucket.arn}/*"]
+#     principals {
+#       type        = "Service"
+#       identifiers = ["cloudfront.amazonaws.com"]
+#     }
 
-    principals {
-      type        = "Service"
-      identifiers = ["cloudfront.amazonaws.com"]
-    }
+#     condition {
+#       test     = "StringEquals"
+#       variable = "AWS:SourceArn"
+#       values   = [aws_cloudfront_distribution.s3_distribution.arn]
+#     }
+#   }
+# }
 
-    condition {
-      test     = "StringEquals"
-      variable = "AWS:SourceArn"
-      values   = [aws_cloudfront_distribution.s3_distribution.arn]
-    }
-  }
-}
-
-resource "aws_s3_bucket_policy" "site" {
-  bucket = aws_s3_bucket.s3_bucket.id
-  policy = data.aws_iam_policy_document.site_policy.json
-}
+# resource "aws_s3_bucket_policy" "site" {
+#   bucket = aws_s3_bucket.s3_bucket.id
+#   policy = data.aws_iam_policy_document.site_policy.json
+# }
 
 resource "aws_cloudfront_distribution" "s3_distribution" {
  origin {
-  domain_name = aws_s3_bucket.s3_bucket.bucket_regional_domain_name   # <—
+  domain_name = aws_s3_bucket_website_configuration.site.website_endpoint   # <—
   origin_id   = local.s3_origin_id
   
   custom_origin_config {

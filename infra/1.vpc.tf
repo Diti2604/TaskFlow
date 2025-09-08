@@ -4,6 +4,8 @@ provider "aws" {
 
 resource "aws_vpc" "my-vpc" {
   cidr_block = var.vpc_cidr
+  enable_dns_support   = true
+  enable_dns_hostnames = true
   tags       = { Name = "my-vpc" }
 }
 
@@ -61,6 +63,7 @@ resource "aws_internet_gateway" "my-internet-gateway" {
 
 resource "aws_eip" "elastic-ip-addresses" {
   count = var.elastic_ip_addresses_count
+  domain = "vpc"
   depends_on = [
     aws_internet_gateway.my-internet-gateway
   ]

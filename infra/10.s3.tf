@@ -1,7 +1,3 @@
-resource "time_sleep" "after_s3" {
-  create_duration = "20s"
-  depends_on = [aws_s3_bucket.s3_bucket]
-}
 resource "aws_s3_bucket" "s3_bucket" {
   bucket = "my-tf-bucket-${var.account_id}-for-static-website-hosting"
 
@@ -34,8 +30,9 @@ resource "aws_s3_bucket_policy" "site_public" {
     Statement = [{
       Effect    = "Allow",
       Principal = "*",
-      Action    = ["s3:GetObject", "s3:PutObject"],
+      Action    = ["s3:GetObject"],
       Resource  = "${aws_s3_bucket.s3_bucket.arn}/*"
     }]
   })
 }
+locals { s3_origin_id = "myS3Origin" }
