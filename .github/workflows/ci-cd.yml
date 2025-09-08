@@ -156,14 +156,13 @@ jobs:
       - name: Getting Account ID
         id: build
         run: |
-          set -e
-          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+            set -e
+            echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
+
       - name: Sync files to S3
-        run: aws s3 sync frontend/my-react-app s3://my-tf-bucket-${var.account_id}-for-static-website-hosting --delete --exclude "node_modules/*" --exclude "package*.json" --exclude ".git/*" --exclude "public/*" --exclude "src/*"
+        run: aws s3 sync frontend/my-react-app s3://my-tf-bucket-${{ env.ACCOUNT_ID }}-for-static-website-hosting --delete --exclude "node_modules/*" --exclude "package*.json" --exclude ".git/*" --exclude "public/*" --exclude "src/*"
         env:
           S3_BUCKET_NAME: my-tf-bucket-${var.account_id}-for-static-website-hosting
-
-
 
 
 
