@@ -2,13 +2,13 @@
 variable "account_id" {
   type        = string
   description = "Account ID of new playgrounds"
-  default     = "730335657713"
+  default     = "047431531039"
 }
 
 variable "docker_image_uri" {
   description = "The full URI of the Docker image to deploy to the EKS cluster."
   type        = string
-  default     = "730335657713.dkr.ecr.us-east-1.amazonaws.com/fastapi-app"
+  default     = "047431531039.dkr.ecr.us-east-1.amazonaws.com/fastapi-app"
 }
 
 
@@ -103,7 +103,7 @@ variable "db_subnet_group_name" {
 variable "db_name" {
   type = string
   description = "Name of the database"
-  default = "database1"
+  default = "database_1"
 }
 variable "db_username" {
   type = string

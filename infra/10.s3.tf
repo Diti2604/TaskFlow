@@ -15,7 +15,6 @@ resource "aws_s3_bucket_website_configuration" "site" {
   bucket = aws_s3_bucket.s3_bucket.id
   index_document { suffix = "index.html" }
   error_document { key    = "error.html" }
-  depends_on = [ time_sleep.after_s3 ]
 }
 
 
@@ -26,7 +25,6 @@ resource "aws_s3_bucket_public_access_block" "site" {
   ignore_public_acls      = false
   block_public_policy     = false
   restrict_public_buckets = false
-  depends_on = [ time_sleep.after_s3 ]
 }
 
 resource "aws_s3_bucket_policy" "site_public" {
@@ -40,5 +38,4 @@ resource "aws_s3_bucket_policy" "site_public" {
       Resource  = "${aws_s3_bucket.s3_bucket.arn}/*"
     }]
   })
-  depends_on = [time_sleep.after_s3] 
 }

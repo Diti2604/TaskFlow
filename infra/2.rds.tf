@@ -7,6 +7,7 @@ resource "aws_db_subnet_group" "db-subnet-group" {
 }
 
 resource "aws_db_instance" "database-1" {
+  identifier                    = "database-1"
   allocated_storage             = 10
   db_name                       = var.db_name
   db_subnet_group_name          = aws_db_subnet_group.db-subnet-group.id
@@ -19,6 +20,66 @@ resource "aws_db_instance" "database-1" {
   parameter_group_name          = "default.mysql8.0"
   skip_final_snapshot           = true
   apply_immediately             = true
-  depends_on = [ aws_vpc.my-vpc ]
+  depends_on                    = [aws_vpc.my-vpc]
+  # provisioner "local-exec" {
+  #   command = "Get-Content -Raw rds_sql_scripts.sql | & \"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -h ${self.address} -u ${self.username} -p${self.password}"
+  #   working_dir = path.module
+  #   interpreter = ["powershell", "-command"]
+  # }
+}
 
+
+resource "aws_security_group" "rds_sg" {
+  name        = "rds-sg"
+  description = "Allow inbound traffic to the RDS instance"
+  ingress {
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all inbound traffic on port 3306 for testing"
+  }
+}
+
+
+data "aws_secretsmanager_secret_version" "db_master" {
+  secret_id  = aws_db_instance.database-1.master_user_secret[0].secret_arn
+  depends_on = [aws_db_instance.database-1]
+}
+
+locals {
+  rds_secret = jsondecode(data.aws_secretsmanager_secret_version.db_master.secret_string)
+  rds_user   = local.rds_secret.username
+  rds_pass   = local.rds_secret.password
+}
+
+# resource "null_resource" "db_init" {
+#   depends_on = [aws_db_instance.database-1]
+
+#   provisioner "local-exec" {
+#     interpreter = ["PowerShell","-Command"]
+#     command = <<EOT
+#       $env:MYSQL_PWD = "${local.rds_pass}"
+#       Get-Content -Raw rds_sql_scripts.sql |
+#         & "C:\\Program Files\\MySQL\\MySQL Server 8.4\\bin\\mysql.exe" `
+#           -h ${aws_db_instance.database-1.address} -u "${local.rds_user}" 
+#       Remove-Item Env:\MYSQL_PWD 
+#     EOT
+#   }
+# }
+
+
+resource "null_resource" "db_init" {
+  depends_on = [aws_db_instance.database-1]
+
+  provisioner "local-exec" {
+    command     = "Get-Content -Raw rds_sql_scripts.sql | & \"C:\\Program Files\\MySQL\\MySQL Server 8.4\\bin\\mysql.exe\" -h ${aws_db_instance.database-1.address} -u ${local.rds_user}"
+
+    working_dir = path.module
+    interpreter = ["PowerShell", "-Command"]
+
+    environment = {
+      MYSQL_PWD = nonsensitive(local.rds_pass)
+    }
+  }
 }

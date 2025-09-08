@@ -22,6 +22,4 @@ output "http_api_endpoint" {
   value       = aws_apigatewayv2_api.http.api_endpoint
 }
 
-output "ingress_http_listener_arn" {
-  value = data.aws_lb_listener.http.arn
-}
+
