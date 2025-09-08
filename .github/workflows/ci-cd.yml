@@ -14,173 +14,154 @@ env:
   K8S_NAMESPACE: default  
 
 jobs:
-  terraform:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+#   terraform:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
 
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: ${{ env.AWS_REGION }}
    
-      - name: Install jq 
-        run: sudo apt-get update && sudo apt-get install -y jq
+#       - name: Install jq 
+#         run: sudo apt-get update && sudo apt-get install -y jq
       
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with: 
-          terraform_wrapper: false
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v3
+#         with: 
+#           terraform_wrapper: false
 
-      - name: Terraform Init
-        working-directory: ${{ env.TF_DIR }}
-        run: terraform init -upgrade
+#       - name: Terraform Init
+#         working-directory: ${{ env.TF_DIR }}
+#         run: terraform init -upgrade
 
-      - name: Terraform Validate
-        working-directory: ${{ env.TF_DIR }}
-        run: terraform validate
+#       - name: Terraform Validate
+#         working-directory: ${{ env.TF_DIR }}
+#         run: terraform validate
 
-      - name: Terraform Plan
-        id: plan
-        working-directory: ${{ env.TF_DIR }}
-        shell: bash
-        run: |
-          set +e
-          terraform plan -input=false -detailed-exitcode -out=tfplan
-          code=$?
-          echo "Terraform exit code: $code"
-          echo "exit_code=$code" >> $GITHUB_OUTPUT
-          set -e
-          if [ "$code" -eq 1 ]; then
-            echo "Plan failed"; exit 1
-          fi
+#       - name: Terraform Plan
+#         id: plan
+#         working-directory: ${{ env.TF_DIR }}
+#         shell: bash
+#         run: |
+#           set +e
+#           terraform plan -input=false -detailed-exitcode -out=tfplan
+#           code=$?
+#           echo "Terraform exit code: $code"
+#           echo "exit_code=$code" >> $GITHUB_OUTPUT
+#           set -e
+#           if [ "$code" -eq 1 ]; then
+#             echo "Plan failed"; exit 1
+#           fi
 
-      - name: Terraform Apply
-        if: ${{ github.event_name == 'push' && steps.plan.outputs.exit_code == '2' }}
-        working-directory: ${{ env.TF_DIR }}
-        run: terraform apply -auto-approve tfplan
+#       - name: Terraform Apply
+#         if: ${{ github.event_name == 'push' && steps.plan.outputs.exit_code == '2' }}
+#         working-directory: ${{ env.TF_DIR }}
+#         run: terraform apply -auto-approve tfplan
 
-  build-and-push:
-    env: 
-      AWS_REGION: us-east-1
-      ECR_REGISTRY: 992382716987.dkr.ecr.us-east-1.amazonaws.com
-      ECR_REPO: fastapi-app
+#   build-and-push:
+#     if: github.event_name == 'push'
+#     needs: terraform
+#     runs-on: ubuntu-latest
+#     outputs:
+#       image_uri: ${{ steps.build.outputs.image_uri }}
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
 
-    if: github.event_name == 'push'
-    needs: terraform
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: ${{ env.AWS_REGION }}
+
+#       - name: Login to Amazon ECR
+#         uses: aws-actions/amazon-ecr-login@v2
+
+#       - name: Build & Push image
+#         id: build
+#         run: |
+#           set -e
+#           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+#           REPOSITORY_URI=$ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/fastapi-app
+#           IMAGE_TAG=${GITHUB_SHA}
+
+#           docker build -t $REPOSITORY_URI:$IMAGE_TAG .
+
+#           docker push $REPOSITORY_URI:$IMAGE_TAG
+
+#           aws eks update-kubeconfig --region $AWS_REGION --name cluster1
+
+#   deploy:
+#     if: github.event_name == 'push'
+#     needs: [terraform, build-and-push]
+#     runs-on: ubuntu-latest
+#     env:
+#       AWS_REGION: us-east-1
+#       EKS_CLUSTER: cluster1
+#       K8S_NAMESPACE: default
+#       ECR_REPO: fastapi-app
+#     steps:
+#       - uses: actions/checkout@v4
+
+#       - uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: ${{ env.AWS_REGION }}
+
+#       - uses: azure/setup-kubectl@v3
+
+
+#       - name: Update kubeconfig
+#         run: aws eks update-kubeconfig --region "$AWS_REGION" --name "$EKS_CLUSTER"
+
+#       - name: Apply Kubernetes Deployment via Terraform
+#         working-directory: ${{ env.TF_DIR }}
+#         run: |
+#           kubectl apply -f k8s/deployment.yaml 
+#           kubectl apply -f k8s/service.yaml     
+  deploy-to-s3:
     runs-on: ubuntu-latest
+    # needs: terraform
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: frontend/my-react-app
+        run: npm install
+
+      - name: Build project
+        working-directory: frontend/my-react-app
+        run: npm run build
+
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build & Push image
+          aws-region: us-east-1
+      - name: Getting Account ID
         id: build
         run: |
-          SHA=${GITHUB_SHA}
-          docker build -t $ECR_REGISTRY/$ECR_REPO:$SHA .
-          docker push $ECR_REGISTRY/$ECR_REPO:$SHA
-      - name: Update kubeconfig for EKS
-        run: aws eks update-kubeconfig --name <your-cluster-name> --region $AWS_REGION
-
-      - name: Set Deployment image to SHA tag
-        run: |
-          kubectl set image deployment/fastapi-deployment \
-            fastapi=$ECR_REGISTRY/$ECR_REPO:${GITHUB_SHA}
-
-  deploy:
-    if: github.event_name == 'push'
-    needs: [terraform, build-and-push]
-    runs-on: ubuntu-latest
-    env:
-      AWS_REGION: us-east-1
-      EKS_CLUSTER: cluster1
-      K8S_NAMESPACE: default
-      ECR_REPO: fastapi-app
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - uses: azure/setup-kubectl@v3
-
-
-      - name: Update kubeconfig
-        run: aws eks update-kubeconfig --region "$AWS_REGION" --name "$EKS_CLUSTER"
-
-      - name: Terraform Init
-        working-directory: ${{ env.TF_DIR }}
-        run: terraform init 
-
-      - name: Terraform Plan (k8s)
-        id: k8s_plan
-        working-directory: ${{ env.TF_DIR }}
-        shell: bash
-        run: |
-          set +e
-          terraform plan \
-            -var="docker_image_uri=${{ needs.build-and-push.outputs.image_uri }}" \
-            -var="k8s_namespace=${{ env.K8S_NAMESPACE }}" \
-
-            -input=false -detailed-exitcode -out=tfplan
-          code=$?
-          echo "exit_code=$code" >> $GITHUB_OUTPUT
           set -e
-          if [ "$code" -eq 1 ]; then echo "Plan failed"; exit 1; fi
-      - name: Apply Kubernetes Deployment via Terraform
-        working-directory: ${{ env.TF_DIR }}
-        run: |
-          terraform apply -auto-approve \
-          -var="docker_image_uri=${{ needs.build-and-push.outputs.image_uri }}" \
-          -var="k8s_namespace=${{ env.K8S_NAMESPACE }}"        
-  # deploy-to-s3:
-  #   runs-on: ubuntu-latest
-  #   needs: terraform
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
-
-  #     - name: Install dependencies
-  #       working-directory: frontend/my-react-app
-  #       run: npm install
-
-  #     - name: Build project
-  #       working-directory: frontend/my-react-app
-  #       run: npm run build
-
-  #     - name: Configure AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: us-east-1
-
-  #     - name: Sync files to S3
-  #       run: aws s3 sync frontend/my-react-app s3://${{ secrets.S3_BUCKET_NAME }} --delete --exclude "node_modules/*" --exclude "package*.json" --exclude ".git/*" --exclude "public/*" --exclude "src/*"
-  #       env:
-  #         S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+      - name: Sync files to S3
+        run: aws s3 sync frontend/my-react-app s3://my-tf-bucket-${var.account_id}-for-static-website-hosting --delete --exclude "node_modules/*" --exclude "package*.json" --exclude ".git/*" --exclude "public/*" --exclude "src/*"
+        env:
+          S3_BUCKET_NAME: my-tf-bucket-${var.account_id}-for-static-website-hosting
 
 
 
