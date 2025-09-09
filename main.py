@@ -113,6 +113,7 @@ def create_users_table():
         try:
             print(f"Attempt {attempt + 1}/{max_retries} to connect and set up database...")
             conn = get_connection()
+            print(f"Connected to DB at {DATABASE_ENDPOINT}, database: database_1")
             with conn.cursor() as cur:
                 create_table_query = """
                 CREATE TABLE IF NOT EXISTS users (
@@ -123,10 +124,14 @@ def create_users_table():
                 """
                 cur.execute(create_table_query)
                 print("✅ Table 'users' created successfully or already exists.")
+                # Optional: Verify table exists
+                cur.execute("SHOW TABLES LIKE 'users'")
+                if cur.fetchone():
+                    print("✅ Verified: 'users' table exists.")
             conn.commit()
-            return # Success, exit the function
+            return
         except Exception as e:
-            print(f"ERROR: Could not set up table on attempt {attempt + 1}: {e}")
+            print(f"ERROR on attempt {attempt + 1}: {e}")
             if attempt < max_retries - 1:
                 print(f"Retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
