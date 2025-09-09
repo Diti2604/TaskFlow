@@ -171,6 +171,8 @@ jobs:
 
         - name: Deploy by updating the image (triggers rollout)
           run: |
+            kubectl apply -f k8s/deployment.yaml 
+            kubectl apply -f k8s/service.yaml 
             kubectl -n "${K8S_NAMESPACE}" set image deployment/fastapi-deployment fastapi="${REPOSITORY_URI}:${IMAGE_TAG}"
             kubectl -n "${K8S_NAMESPACE}" rollout status deployment/fastapi-deployment --timeout=180s
   deploy-to-s3:
