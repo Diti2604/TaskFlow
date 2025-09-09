@@ -68,7 +68,7 @@ def get_connection():
     
 @app.get("/")
 def read_root():
-    return {"message": "Hello from FastAPI on EC23"}
+    return {"message": "Hello from FastAPI on EC2"}
 
 @app.post("/users")
 def create_user(user: User):
