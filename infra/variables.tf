@@ -2,16 +2,8 @@
 variable "account_id" {
   type        = string
   description = "Account ID of new playgrounds"
-  default     = "427547500449"
+  default     = "654654372652"
 }
-
-variable "docker_image_uri" {
-  description = "The full URI of the Docker image to deploy to the EKS cluster."
-  type        = string
-  default     = "427547500449.dkr.ecr.us-east-1.amazonaws.com/fastapi-app"
-}
-
-
 
 #VPC VARIABLES
 variable "aws_region" {

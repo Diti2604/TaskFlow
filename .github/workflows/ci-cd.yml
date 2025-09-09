@@ -169,12 +169,42 @@ jobs:
         - name: Update kubeconfig
           run: aws eks update-kubeconfig --region "${AWS_REGION}" --name "${EKS_CLUSTER}"
 
-        - name: Deploy by updating the image (triggers rollout)
+        - name: Create/Update K8s resources
+          shell: bash
           run: |
-            kubectl apply -f k8s/deployment.yaml 
-            kubectl apply -f k8s/service.yaml 
-            kubectl -n "${K8S_NAMESPACE}" set image deployment/fastapi-deployment fastapi="${REPOSITORY_URI}:${IMAGE_TAG}"
-            kubectl -n "${K8S_NAMESPACE}" rollout status deployment/fastapi-deployment --timeout=180s
+            set -euo pipefail
+
+            # Require image info from earlier steps
+            : "${REPOSITORY_URI:?Missing REPOSITORY_URI}"
+            : "${IMAGE_TAG:?Missing IMAGE_TAG}"
+
+            NS="${K8S_NAMESPACE}"
+
+            # Ensure namespace exists
+            kubectl get ns "${NS}" >/dev/null 2>&1 || kubectl create ns "${NS}"
+
+            echo "== Service =="
+            # Create service if missing; always apply to reconcile changes
+            if ! kubectl -n "${NS}" get -f k8s/service.yaml >/dev/null 2>&1; then
+              echo "Service not found; creating from k8s/service.yaml"
+              kubectl -n "${NS}" apply -f k8s/service.yaml
+            else
+              echo "Service exists; applying any updates from k8s/service.yaml"
+              kubectl -n "${NS}" apply -f k8s/service.yaml
+            fi
+
+            echo "== Deployment =="
+            if ! kubectl -n "${NS}" get deploy fastapi-deployment >/dev/null 2>&1; then
+              echo "Deployment not found; creating from k8s/deployment.yaml"
+              kubectl -n "${NS}" apply -f k8s/deployment.yaml
+            else
+              echo "Deployment exists; updating image to ${REPOSITORY_URI}:${IMAGE_TAG}"
+              kubectl -n "${NS}" set image deployment/fastapi-deployment fastapi="${REPOSITORY_URI}:${IMAGE_TAG}" --record=true
+            fi
+
+            echo "== Rollout status =="
+            kubectl -n "${NS}" rollout status deployment/fastapi-deployment --timeout=180s
+
   deploy-to-s3:
     runs-on: ubuntu-latest
     # needs: terraform
