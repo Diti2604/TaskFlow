@@ -95,6 +95,12 @@ resource "aws_eks_addon" "addon-3" {
   addon_name   = "kube-proxy"
 }
 
+resource "aws_eks_addon" "addon-2" {
+  cluster_name = aws_eks_cluster.cluster1.name
+  addon_name   = "coredns"
+}
+
+
 resource "aws_eks_addon" "addon-5" {
   cluster_name = aws_eks_cluster.cluster1.name
   addon_name   = "eks-pod-identity-agent"
