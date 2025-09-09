@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-import pymysql, boto3, json, os, threading
+import pymysql, boto3, json, os
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 
@@ -9,8 +9,8 @@ load_dotenv()
 app = FastAPI()
 
 # --- ENV ---
-SECRET_NAME = os.getenv("SECRET_NAME", "rds!db-xxxxxxxx")
-DB_HOST     = os.getenv("DB_HOST", "database-1.xxxxxx.us-east-1.rds.amazonaws.com")
+SECRET_NAME = os.getenv("SECRET_NAME")
+DB_HOST     = os.getenv("DB_HOST")
 DB_NAME     = os.getenv("DB_NAME", "database_1")
 AWS_REGION  = os.getenv("AWS_REGION", "us-east-1")
 
@@ -23,7 +23,6 @@ class User(BaseModel):
     name: str
     password: str
 
-# --- Secrets ---
 def get_secret():
     try:
         client = boto3.client("secretsmanager", region_name=AWS_REGION)
@@ -33,70 +32,47 @@ def get_secret():
         print("[bootstrap] Secrets Manager error:", e)
         raise HTTPException(status_code=500, detail="Failed to read DB secret")
 
-# --- Ensure users table (idempotent) ---
-_schema_ready = False
-_schema_lock = threading.Lock()
+TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  password VARCHAR(255) NOT NULL
+) ENGINE=InnoDB;
+"""
 
-def ensure_users_table():
-    creds = get_secret()
+def _ensure_table(conn):
+    # Called on every fresh connection (cheap, idempotent)
+    with conn.cursor() as cur:
+        cur.execute(TABLE_SQL)
+    conn.commit()
+    print(f"[bootstrap] Ensured table `{DB_NAME}.users`")
 
-    # Connect to target DB (Terraform created it)
-    conn = pymysql.connect(
-        host=DB_HOST,
-        user=creds["username"],
-        password=creds["password"],
-        database=DB_NAME,
-        autocommit=True,
-        cursorclass=pymysql.cursors.DictCursor,
-    )
-    try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                  id INT AUTO_INCREMENT PRIMARY KEY,
-                  name VARCHAR(255) NOT NULL,
-                  password VARCHAR(255) NOT NULL
-                ) ENGINE=InnoDB;
-            """)
-        print(f"[bootstrap] Ensured table `{DB_NAME}.users`")
-    finally:
-        conn.close()
-
-def ensure_schema_once():
-    global _schema_ready
-    if _schema_ready:
-        return
-    with _schema_lock:
-        if _schema_ready:
-            return
-        ensure_users_table()
-        _schema_ready = True
-
-@app.on_event("startup")
-def _startup():
-    try:
-        ensure_schema_once()
-    except Exception as e:
-        # Don’t crash startup; keep clear logs
-        print("[bootstrap] Failed to ensure schema:", e)
-
-# --- DB conn for handlers ---
 def get_connection():
-    ensure_schema_once()  # safety net if startup didn’t run
     creds = get_secret()
     try:
-        return pymysql.connect(
+        conn = pymysql.connect(
             host=DB_HOST,
             user=creds["username"],
             password=creds["password"],
             database=DB_NAME,
+            autocommit=False,  # commit after CREATE TABLE
             cursorclass=pymysql.cursors.DictCursor,
         )
+        _ensure_table(conn)
+        return conn
     except pymysql.MySQLError as e:
         print("DB connection failed:", e)
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- Routes ---
+@app.on_event("startup")
+def _startup():
+    # Try once at startup; if this fails, the first request still creates the table.
+    try:
+        conn = get_connection()
+        conn.close()
+    except Exception as e:
+        print("[bootstrap] Startup ensure failed (will retry on first request):", e)
+
 @app.get("/")
 def read_root():
     return {"message": "Hello from FastAPI on EKS"}
