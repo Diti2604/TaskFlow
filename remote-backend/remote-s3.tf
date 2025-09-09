@@ -15,7 +15,7 @@ module "s3_bucket" {
 variable "account_id" {
   type        = string
   description = "Account ID of new playgrounds"
-  default     = "654654372652"
+  default     = "891377027397"
 }
 
 output "s3-bucket-name" {
