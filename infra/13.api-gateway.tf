@@ -1,6 +1,6 @@
 resource "time_sleep" "post_alb_buffer" {
   depends_on      = [kubernetes_ingress_v1.fastapi]
-  create_duration = "8m30s"
+  create_duration = "9m"
 }
 
 data "aws_lb" "ingress_alb" {
