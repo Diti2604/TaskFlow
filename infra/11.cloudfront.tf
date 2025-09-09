@@ -28,14 +28,9 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     cached_methods   = ["GET", "HEAD"]
     cache_policy_id  = data.aws_cloudfront_cache_policy.caching_disabled.id
     target_origin_id = local.s3_origin_id
+    origin_request_policy_id   = data.aws_cloudfront_origin_request_policy.all_viewer_except_host.id
+    compress                   = true
 
-    forwarded_values {
-      query_string = false
-
-      cookies {
-        forward = "none"
-      }
-    }
 
     viewer_protocol_policy = "allow-all"
     min_ttl                = 0
