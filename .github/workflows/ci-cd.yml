@@ -127,6 +127,52 @@ jobs:
 #         run: |
 #           kubectl apply -f k8s/deployment.yaml 
 #           kubectl apply -f k8s/service.yaml     
+
+  build-and-deploy:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Configure AWS credentials
+          uses: aws-actions/configure-aws-credentials@v4
+          with:
+            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            aws-region: ${{ env.AWS_REGION }}
+
+        - name: Login to Amazon ECR
+          uses: aws-actions/amazon-ecr-login@v2
+
+        - name: Build & Push image (tagged with commit SHA, also update :latest)
+          id: push
+          shell: bash
+          run: |
+            set -e
+            ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+            REPOSITORY_URI="$ACCOUNT_ID.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
+            IMAGE_TAG="${GITHUB_SHA}"
+
+            docker build -t "${REPOSITORY_URI}:${IMAGE_TAG}" .
+            docker push "${REPOSITORY_URI}:${IMAGE_TAG}"
+
+            # (Optional) also move :latest for humans; K8s won't use this automatically.
+            docker tag "${REPOSITORY_URI}:${IMAGE_TAG}" "${REPOSITORY_URI}:latest"
+            docker push "${REPOSITORY_URI}:latest"
+
+            echo "REPOSITORY_URI=${REPOSITORY_URI}" >> $GITHUB_ENV
+            echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+
+        - name: Install kubectl
+          uses: azure/setup-kubectl@v3
+
+        - name: Update kubeconfig
+          run: aws eks update-kubeconfig --region "${AWS_REGION}" --name "${EKS_CLUSTER}"
+
+        - name: Deploy by updating the image (triggers rollout)
+          run: |
+            kubectl -n "${K8S_NAMESPACE}" set image deployment/fastapi-deployment fastapi="${REPOSITORY_URI}:${IMAGE_TAG}"
+            kubectl -n "${K8S_NAMESPACE}" rollout status deployment/fastapi-deployment --timeout=180s
   deploy-to-s3:
     runs-on: ubuntu-latest
     # needs: terraform

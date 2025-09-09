@@ -14,7 +14,7 @@ terraform {
     }
   }
   backend "s3" {
-     bucket = "my-s3-bucket-944103138569"
+     bucket = "my-s3-bucket-427547500449"
      key = "backend"
      region = "us-east-1"
   }

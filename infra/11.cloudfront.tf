@@ -1,27 +1,12 @@
-# data "aws_iam_policy_document" "site_policy" {
-#   statement {
-#     actions   = ["s3:*"]
-#     resources = ["${aws_s3_bucket.s3_bucket.arn}/*"]
+locals {
+  cf_aliases = [
+    "login.${var.account_id}.realhandsonlabs.net",
+  ]
+}
 
-#     principals {
-#       type        = "Service"
-#       identifiers = ["cloudfront.amazonaws.com"]
-#     }
-
-#     condition {
-#       test     = "StringEquals"
-#       variable = "AWS:SourceArn"
-#       values   = [aws_cloudfront_distribution.s3_distribution.arn]
-#     }
-#   }
-# }
-
-# resource "aws_s3_bucket_policy" "site" {
-#   bucket = aws_s3_bucket.s3_bucket.id
-#   policy = data.aws_iam_policy_document.site_policy.json
-# }
 
 resource "aws_cloudfront_distribution" "s3_distribution" {
+ aliases = local.cf_aliases
  origin {
   domain_name = aws_s3_bucket_website_configuration.site.website_endpoint   # <—
   origin_id   = local.s3_origin_id
@@ -110,6 +95,9 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    acm_certificate_arn      = aws_acm_certificate.cert-base.arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
   }
+    depends_on = [aws_acm_certificate_validation.name]
 }

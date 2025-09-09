@@ -2,13 +2,13 @@
 variable "account_id" {
   type        = string
   description = "Account ID of new playgrounds"
-  default     = "944103138569"
+  default     = "427547500449"
 }
 
 variable "docker_image_uri" {
   description = "The full URI of the Docker image to deploy to the EKS cluster."
   type        = string
-  default     = "944103138569.dkr.ecr.us-east-1.amazonaws.com/fastapi-app"
+  default     = "427547500449.dkr.ecr.us-east-1.amazonaws.com/fastapi-app"
 }
 
 

@@ -14,6 +14,12 @@ resource "aws_s3_bucket_website_configuration" "site" {
 }
 
 
+resource "aws_s3_bucket_ownership_controls" "enable_acls" {
+  bucket = aws_s3_bucket.s3_bucket.id
+  rule {
+    object_ownership = "BucketOwnerPreferred" 
+  }
+}
 
 resource "aws_s3_bucket_public_access_block" "site" {
   bucket                  = aws_s3_bucket.s3_bucket.id
