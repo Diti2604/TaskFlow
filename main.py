@@ -1,153 +1,138 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-import pymysql, boto3, json, os, time
+import os, json, time
+import pymysql
+import boto3
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 
 load_dotenv()
 
-app = FastAPI()
+# ---- ENV (wired by your GitHub Action via `kubectl set env`) ----
+SECRET_NAME        = os.getenv("SECRET_NAME")            # ARN or name of the RDS master secret
+DATABASE_ENDPOINT  = os.getenv("DATABASE_ENDPOINT")      # RDS endpoint address
+DB_NAME            = os.getenv("DB_NAME", "database_1")  # DB created by TF (or on first run)
+AWS_REGION         = os.getenv("AWS_REGION", "us-east-1")
 
-SECRET_NAME = os.getenv('SECRET_NAME')
-DATABASE_ENDPOINT = os.getenv('DATABASE_ENDPOINT')
+# Fail fast on missing required envs
+for k in ("SECRET_NAME", "DATABASE_ENDPOINT"):
+    if not globals()[k]:
+        raise RuntimeError(f"Missing required env var: {k}")
+
+# ---- FastAPI app ----
+app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
 )
 
-class User(BaseModel):  
+class User(BaseModel):
     name: str
     password: str
 
+# ---- Secrets Manager (simple cache to avoid calling every request) ----
+_SECRET_CACHE = None
+_SECRET_TS    = 0.0
+_SECRET_TTL   = 300  # seconds
 
-def get_secret():
-    secret_name = SECRET_NAME
-    region_name = "us-east-1"
-
-    # Create a Secrets Manager client
-    session = boto3.session.Session()
-    client = session.client(
-        service_name='secretsmanager',
-        region_name=region_name
-    )
-
+def get_db_creds():
+    global _SECRET_CACHE, _SECRET_TS
+    now = time.time()
+    if _SECRET_CACHE and (now - _SECRET_TS) < _SECRET_TTL:
+        return _SECRET_CACHE
     try:
-        get_secret_value_response = client.get_secret_value(
-            SecretId=secret_name
-        )
+        sm = boto3.client("secretsmanager", region_name=AWS_REGION)
+        resp = sm.get_secret_value(SecretId=SECRET_NAME)
+        _SECRET_CACHE = json.loads(resp["SecretString"])  # {"username": "...", "password": "..."}
+        _SECRET_TS = now
+        return _SECRET_CACHE
     except ClientError as e:
-        # For a list of exceptions thrown, see
-        # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
-        print("Secrets Manager error: ", str(e))
-        raise e
-    secret = get_secret_value_response['SecretString']
-    secret = json.loads(secret)
-    print("Retrieved Secret: ", secret)
-    return secret
+        print("[bootstrap] Secrets Manager error:", e)
+        raise HTTPException(status_code=500, detail="Failed to read DB secret")
+
+# ---- Schema bootstrap ----
+TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  password VARCHAR(255) NOT NULL
+);
+""".strip()
+
+def ensure_db_and_table(creds):
+    # 1) Ensure the database exists
+    conn = pymysql.connect(
+        host=DATABASE_ENDPOINT,
+        user=creds["username"],
+        password=creds["password"],
+        autocommit=True,
+        connect_timeout=5,
+    )
+    try:
+        with conn.cursor() as cur:
+            cur.execute(f"CREATE DATABASE IF NOT EXISTS `{DB_NAME}`;")
+    finally:
+        conn.close()
+
+    # 2) Ensure the users table exists
+    conn = pymysql.connect(
+        host=DATABASE_ENDPOINT,
+        user=creds["username"],
+        password=creds["password"],
+        database=DB_NAME,
+        autocommit=True,
+        connect_timeout=5,
+    )
+    try:
+        with conn.cursor() as cur:
+            cur.execute(TABLE_SQL)
+        print(f"[bootstrap] Ensured `{DB_NAME}.users`")
+    finally:
+        conn.close()
 
 def get_connection():
+    creds = get_db_creds()
+    # Ensure schema (idempotent, cheap)
+    ensure_db_and_table(creds)
     try:
-        print(" Starting DB connection...")
-        creds = get_secret()
-        conn = pymysql.connect(
+        return pymysql.connect(
             host=DATABASE_ENDPOINT,
             user=creds["username"],
             password=creds["password"],
-            database="database_1",
-            cursorclass=pymysql.cursors.DictCursor
+            database=DB_NAME,
+            cursorclass=pymysql.cursors.DictCursor,
+            connect_timeout=5,
+            read_timeout=10,
+            write_timeout=10,
+            # Optional TLS (mount RDS CA and uncomment):
+            # ssl={"ca": "/etc/ssl/certs/rds-combined-ca-bundle.pem"},
         )
-        print("DB connection successful")
-        return conn
     except pymysql.MySQLError as e:
-        print("DB connection failed:", str(e))
+        print("DB connection failed:", e)
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+# ---- Routes ----
 @app.get("/")
-def read_root():
-    return {"message": "Hello from FastAPI on EC2"}
+def root():
+    return {"message": "Hello from FastAPI on EKS"}
 
 @app.post("/users")
 def create_user(user: User):
-    try:
-        conn = get_connection()
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "INSERT INTO users (name, password) VALUES (%s, %s)",
-                    (user.name, user.password)
-                )
-            conn.commit()
-        return {"message": "User created successfully!"}
-    except pymysql.MySQLError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    conn = get_connection()
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO users (name, password) VALUES (%s, %s)", (user.name, user.password))
+        conn.commit()
+    return {"message": "User created successfully!"}
 
 @app.post("/login")
 def login(user: User):
-    try:
-        conn = get_connection()
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT * FROM users WHERE name=%s AND password=%s",
-                    (user.name, user.password)
-                )
-                result = cur.fetchone()
-        if not result:
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-        return {"message": f"Welcome, {user.name}!"}
-    except pymysql.MySQLError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-def create_users_table():
-    """Connects to the database and creates the 'users' table if it doesn't exist."""
-    conn = None
-    max_retries = 5
-    retry_delay = 10  # seconds
-
-    for attempt in range(max_retries):
-        try:
-            print(f"Attempt {attempt + 1}/{max_retries} to connect and set up database...")
-            conn = get_connection()
-            print(f"Connected to DB at {DATABASE_ENDPOINT}, database: database_1")
-            with conn.cursor() as cur:
-                create_table_query = """
-                CREATE TABLE IF NOT EXISTS users (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    name VARCHAR(255) NOT NULL UNIQUE,
-                    password VARCHAR(255) NOT NULL
-                );
-                """
-                cur.execute(create_table_query)
-                print("✅ Table 'users' created successfully or already exists.")
-                # Optional: Verify table exists
-                cur.execute("SHOW TABLES LIKE 'users'")
-                if cur.fetchone():
-                    print("✅ Verified: 'users' table exists.")
-            conn.commit()
-            return
-        except Exception as e:
-            print(f"ERROR on attempt {attempt + 1}: {e}")
-            if attempt < max_retries - 1:
-                print(f"Retrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
-            else:
-                print("FATAL: Max retries reached. Could not set up database.")
-                # You might want to raise the exception to cause the pod to crash and restart
-                raise e
-        finally:
-            if conn:
-                conn.close()
-                print("⏹️  Database connection closed.")
-
-# --- FastAPI Startup Event ---
-@app.on_event("startup")
-def on_startup():
-    """This function runs once when the application starts."""
-    print("🚀 Application starting up...")
-    create_users_table()
-    print("✅ Startup tasks complete.")
+    conn = get_connection()
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM users WHERE name=%s AND password=%s", (user.name, user.password))
+            row = cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    return {"message": f"Welcome, {user.name}!"}
