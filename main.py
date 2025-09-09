@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-import pymysql, boto3, json, os
+import pymysql, boto3, json, os, time
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 
