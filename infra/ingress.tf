@@ -82,16 +82,16 @@ resource "helm_release" "aws_lb_controller" {
 
 
 
-resource "kubernetes_service_account" "secrets_manager_sa" {
-  metadata {
-    name      = "secrets-manager-sa"
-    namespace = "kube-system"
-    annotations = {
-      "eks.amazonaws.com/role-arn" = aws_iam_role.secrets_manager_sa.arn
-    }
-  }
-  automount_service_account_token = true
-}
+# resource "kubernetes_service_account" "secrets_manager_sa" {
+#   metadata {
+#     name      = "secrets-manager-sa"
+#     namespace = "kube-system"
+#     annotations = {
+#       "eks.amazonaws.com/role-arn" = aws_iam_role.secrets_manager_sa.arn
+#     }
+#   }
+#   automount_service_account_token = true
+# }
 
 # resource "aws_iam_role" "secrets_manager_sa" {
 #   name = "secrets-manager-sa-role"
