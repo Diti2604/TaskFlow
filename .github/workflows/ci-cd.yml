@@ -242,3 +242,6 @@ jobs:
         run: aws s3 sync frontend/my-react-app s3://my-tf-bucket-${{ env.ACCOUNT_ID }}-for-static-website-hosting --delete --exclude "node_modules/*" --exclude "package*.json" --exclude ".git/*" --exclude "public/*" --exclude "src/*"
         env:
           S3_BUCKET_NAME: my-tf-bucket-${var.account_id}-for-static-website-hosting
+
+
+

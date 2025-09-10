@@ -101,3 +101,24 @@ def login(user: User):
         return {"message": f"Welcome, {user.name}!"}
     except pymysql.MySQLError as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+def create_users_table():
+    try:
+        conn = get_connection()
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS users (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        name VARCHAR(255) NOT NULL,
+                        password VARCHAR(255) NOT NULL
+                    )
+                """)
+            conn.commit()
+        print("Users table created successfully")
+    except pymysql.MySQLError as e:
+        print("Failed to create users table:", str(e))
+        
+@app.on_event("startup")
+def startup_event():
+    create_users_table()
