@@ -80,3 +80,58 @@ resource "helm_release" "aws_lb_controller" {
   })]
 }
 
+
+
+resource "kubernetes_service_account" "secrets_manager_sa" {
+  metadata {
+    name      = "secrets-manager-sa"
+    namespace = "kube-system"
+    annotations = {
+      "eks.amazonaws.com/role-arn" = aws_iam_role.secrets_manager_sa.arn
+    }
+  }
+  automount_service_account_token = true
+}
+
+# resource "aws_iam_role" "secrets_manager_sa" {
+#   name = "secrets-manager-sa-role"
+#   assume_role_policy = jsonencode({
+#     Version = "2012-10-17",
+#     Statement = [{
+#       Effect = "Allow",
+#       Principal = { Federated = aws_iam_openid_connect_provider.cluster.arn },
+#       Action = "sts:AssumeRoleWithWebIdentity",
+#       Condition = {
+#         StringEquals = {
+#           "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub" = "system:serviceaccount:kube-system:secrets-manager-sa"
+#         }
+#       }
+#     }]
+#   })
+# }
+
+# resource "aws_iam_role_policy_attachment" "secrets_manager_attach" {
+#   role       = aws_iam_role.secrets_manager_sa.name
+#   policy_arn = aws_iam_policy.eks-secrets-manager-policy.arn
+# }
+
+# resource "aws_iam_policy" "eks-secrets-manager-policy" {
+#   name        = "eks-secrets-manager-policy"
+#   description = "Policy for EKS Secrets Manager access"
+  
+#   policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Action   = "secretsmanager:GetSecretValue"
+#         Effect   = "Allow"
+#         Resource = "arn:aws:secretsmanager:us-east-1:123456789012:secret:secretName-AbCdEf"
+#       },
+#       {
+#         Action   = "kms:Decrypt"
+#         Effect   = "Allow"
+#         Resource = "arn:aws:kms:us-east-1:123456789012:key/key-id"
+#       }
+#     ]
+#   })
+# }
