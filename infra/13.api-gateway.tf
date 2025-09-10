@@ -64,4 +64,3 @@ resource "aws_apigatewayv2_stage" "default-stage" {
   name        = "$default"
   auto_deploy = true
 }   
-
