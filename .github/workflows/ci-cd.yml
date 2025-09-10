@@ -149,6 +149,8 @@ jobs:
               DATABASE_HOST='${{ steps.rds.outputs.endpoint }}' \
               DB_NAME='database_1' \
               AWS_REGION='${{ env.AWS_REGION }}'
+
+              
             echo "== Rollout status =="
             kubectl -n "${NS}" rollout status deployment/fastapi-deployment --timeout=180s
    
