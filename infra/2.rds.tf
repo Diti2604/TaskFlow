@@ -29,7 +29,7 @@ resource "aws_db_instance" "database-1" {
   # }
 }
 
-# SG that only allows 3306 from your private subnets
+
 resource "aws_security_group" "rds_mysql" {
   name        = "rds-mysql-from-private-subnets"
   description = "Allow MySQL from EKS private subnets"
