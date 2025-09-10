@@ -62,71 +62,7 @@ jobs:
       - name: Terraform Apply
         if: ${{ github.event_name == 'push' && steps.plan.outputs.exit_code == '2' }}
         working-directory: ${{ env.TF_DIR }}
-        run: terraform apply -auto-approve tfplan
-
-#   build-and-push:
-#     if: github.event_name == 'push'
-#     needs: terraform
-#     runs-on: ubuntu-latest
-#     outputs:
-#       image_uri: ${{ steps.build.outputs.image_uri }}
-#     steps:
-#       - name: Checkout
-#         uses: actions/checkout@v4
-
-#       - name: Configure AWS credentials
-#         uses: aws-actions/configure-aws-credentials@v4
-#         with:
-#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#           aws-region: ${{ env.AWS_REGION }}
-
-#       - name: Login to Amazon ECR
-#         uses: aws-actions/amazon-ecr-login@v2
-
-#       - name: Build & Push image
-#         id: build
-#         run: |
-#           set -e
-#           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-#           REPOSITORY_URI=$ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/fastapi-app
-#           IMAGE_TAG=${GITHUB_SHA}
-
-#           docker build -t $REPOSITORY_URI:$IMAGE_TAG .
-
-#           docker push $REPOSITORY_URI:$IMAGE_TAG
-
-#           aws eks update-kubeconfig --region $AWS_REGION --name cluster1
-
-#   deploy:
-#     if: github.event_name == 'push'
-#     needs: [terraform, build-and-push]
-#     runs-on: ubuntu-latest
-#     env:
-#       AWS_REGION: us-east-1
-#       EKS_CLUSTER: cluster1
-#       K8S_NAMESPACE: default
-#       ECR_REPO: fastapi-app
-#     steps:
-#       - uses: actions/checkout@v4
-
-#       - uses: aws-actions/configure-aws-credentials@v4
-#         with:
-#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#           aws-region: ${{ env.AWS_REGION }}
-
-#       - uses: azure/setup-kubectl@v3
-
-
-#       - name: Update kubeconfig
-#         run: aws eks update-kubeconfig --region "$AWS_REGION" --name "$EKS_CLUSTER"
-
-#       - name: Apply Kubernetes Deployment via Terraform
-#         working-directory: ${{ env.TF_DIR }}
-#         run: |
-#           kubectl apply -f k8s/deployment.yaml 
-#           kubectl apply -f k8s/service.yaml     
+        run: terraform apply -auto-approve tfplan  
 
   build-and-deploy:
       runs-on: ubuntu-latest
@@ -145,7 +81,7 @@ jobs:
         - name: Login to Amazon ECR
           uses: aws-actions/amazon-ecr-login@v2
 
-        - name: Build & Push image (tagged with commit SHA, also update :latest)
+        - name: Build & Push image
           id: push
           shell: bash
           run: |
@@ -157,7 +93,6 @@ jobs:
             docker build -t "${REPOSITORY_URI}:${IMAGE_TAG}" .
             docker push "${REPOSITORY_URI}:${IMAGE_TAG}"
 
-            # (Optional) also move :latest for humans; K8s won't use this automatically.
             docker tag "${REPOSITORY_URI}:${IMAGE_TAG}" "${REPOSITORY_URI}:latest"
             docker push "${REPOSITORY_URI}:latest"
 
@@ -183,17 +118,14 @@ jobs:
           run: |
             set -euo pipefail
 
-            # Require image info from earlier steps
             : "${REPOSITORY_URI:?Missing REPOSITORY_URI}"
             : "${IMAGE_TAG:?Missing IMAGE_TAG}"
 
             NS="${K8S_NAMESPACE}"
 
-            # Ensure namespace exists
             kubectl get ns "${NS}" >/dev/null 2>&1 || kubectl create ns "${NS}"
 
             echo "== Service =="
-            # Create service if missing; always apply to reconcile changes
             if ! kubectl -n "${NS}" get -f k8s/service.yaml >/dev/null 2>&1; then
               echo "Service not found; creating from k8s/service.yaml"
               kubectl -n "${NS}" apply -f k8s/service.yaml
@@ -212,10 +144,10 @@ jobs:
             fi
 
             echo "== Set env on Deployment =="
-            kubectl -n "$NS" set env deployment/${K8S_DEPLOYMENT} \
+            kubectl -n "$NS" set env deployment/fastapi-deployment \
               SECRET_NAME='${{ steps.rds.outputs.secret_arn }}' \
               DATABASE_HOST='${{ steps.rds.outputs.endpoint }}' \
-              DB_NAME='${{ env.DB_NAME }}' \
+              DB_NAME='database_1' \
               AWS_REGION='${{ env.AWS_REGION }}'
             echo "== Rollout status =="
             kubectl -n "${NS}" rollout status deployment/fastapi-deployment --timeout=180s
