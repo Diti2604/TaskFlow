@@ -5,7 +5,7 @@ let isLogin = true;
 
 
 
-const apiUrl = 'https://l8yuze2qf8.execute-api.us-east-1.amazonaws.com';
+const apiUrl = 'https://po09gfkilb.execute-api.us-east-1.amazonaws.com';
 
 // Debug function to log issues
 const debugLog = (message) => {
