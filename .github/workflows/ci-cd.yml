@@ -176,16 +176,16 @@ jobs:
 
         - name: Update kubeconfig
           run: aws eks update-kubeconfig --region "${AWS_REGION}" --name "${EKS_CLUSTER}"
-        - name: Discover RDS endpoint & secret
-          id: rds
-          shell: bash
-          run: |
-            set -e
-            DB_ID=database-1
-            RDS_ENDPOINT=$(aws rds describe-db-instances --db-instance-identifier "$DB_ID" --query 'DBInstances[0].Endpoint.Address' --output text)
-            SECRET_ARN=$(aws rds describe-db-instances --db-instance-identifier "$DB_ID" --query 'DBInstances[0].MasterUserSecret.SecretArn' --output text)
-            echo "endpoint=${RDS_ENDPOINT}" >> $GITHUB_OUTPUT
-            echo "secret_arn=${SECRET_ARN}" >> $GITHUB_OUTPUT
+        # - name: Discover RDS endpoint & secret
+        #   id: rds
+        #   shell: bash
+        #   run: |
+        #     set -e
+        #     DB_ID=database-1
+        #     RDS_ENDPOINT=$(aws rds describe-db-instances --db-instance-identifier "$DB_ID" --query 'DBInstances[0].Endpoint.Address' --output text)
+        #     SECRET_ARN=$(aws rds describe-db-instances --db-instance-identifier "$DB_ID" --query 'DBInstances[0].MasterUserSecret.SecretArn' --output text)
+        #     echo "endpoint=${RDS_ENDPOINT}" >> $GITHUB_OUTPUT
+        #     echo "secret_arn=${SECRET_ARN}" >> $GITHUB_OUTPUT
 
         - name: Create/Update K8s resources
           shell: bash
@@ -219,16 +219,19 @@ jobs:
               echo "Deployment exists; updating image to ${REPOSITORY_URI}:${IMAGE_TAG}"
               kubectl -n "${NS}" set image deployment/fastapi-deployment fastapi="${REPOSITORY_URI}:${IMAGE_TAG}" --record=true
             fi
-            
-            echo "== Set env on Deployment =="
-            kubectl -n "$NS" set env deployment/${K8S_DEPLOYMENT} \
-            SECRET_NAME='${{ steps.rds.outputs.secret_arn }}' \
-            DATABASE_ENDPOINT='${{ steps.rds.outputs.endpoint }}' \
-            DB_NAME='${{ env.DB_NAME }}' \
-            AWS_REGION='${{ env.AWS_REGION }}'
 
+
+            
             echo "== Rollout status =="
             kubectl -n "${NS}" rollout status deployment/fastapi-deployment --timeout=180s
+          # echo "== Set env on Deployment =="
+          # kubectl -n "$NS" set env deployment/${K8S_DEPLOYMENT} \
+          # SECRET_NAME='${{ steps.rds.outputs.secret_arn }}' \
+          # DATABASE_ENDPOINT='${{ steps.rds.outputs.endpoint }}' \
+          # DB_NAME='${{ env.DB_NAME }}' \
+          # AWS_REGION='${{ env.AWS_REGION }}'
+
+           
 
   deploy-to-s3:
     runs-on: ubuntu-latest
