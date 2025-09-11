@@ -99,7 +99,7 @@ resource "aws_iam_policy" "secrets_read" {
       {
         Effect   : "Allow",
         Action   : ["kms:Decrypt"],
-        Resource : aws_kms_key.secrets_manager_password.arn
+        Resource : aws_kms_key.secrets-manager-password.arn
       }
     ]
   })
