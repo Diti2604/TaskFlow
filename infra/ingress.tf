@@ -85,51 +85,51 @@ locals {
   secret_arn = data.aws_secretsmanager_secret.rds_master.arn
 }
 
-resource "aws_iam_policy" "fastapi_secrets" {
-  name        = "fastapi-secretsmanager-read"
-  description = "FastAPI: GetSecretValue on RDS master secret + CMK decrypt"
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      { "Effect":"Allow", "Action":["secretsmanager:GetSecretValue"], "Resource": data.aws_secretsmanager_secret.rds_master.arn },
-      { "Effect":"Allow", "Action":["kms:Decrypt"], "Resource": aws_kms_key.secrets-manager-password.arn }
-    ]
-  })
-}
+# resource "aws_iam_policy" "fastapi_secrets" {
+#   name        = "fastapi-secretsmanager-read"
+#   description = "FastAPI: GetSecretValue on RDS master secret + CMK decrypt"
+#   policy = jsonencode({
+#     Version = "2012-10-17",
+#     Statement = [
+#       { "Effect":"Allow", "Action":["secretsmanager:GetSecretValue"], "Resource": data.aws_secretsmanager_secret.rds_master.arn },
+#       { "Effect":"Allow", "Action":["kms:Decrypt"], "Resource": aws_kms_key.secrets-manager-password.arn }
+#     ]
+#   })
+# }
 
 
 
-# -------- IAM role for Pod Identity (trust pods.eks.amazonaws.com) ----------
-resource "aws_iam_role" "fastapi_pod_role" {
-  name = "fastapi-pod-role"
-  assume_role_policy = jsonencode({
-    Version : "2012-10-17",
-    Statement : [{
-      Effect    : "Allow",
-      Principal : { Service : "pods.eks.amazonaws.com" },
-      Action    : ["sts:AssumeRole", "sts:TagSession"]
-    }]
-  })
-}
+# # -------- IAM role for Pod Identity (trust pods.eks.amazonaws.com) ----------
+# resource "aws_iam_role" "fastapi_pod_role" {
+#   name = "fastapi-pod-role"
+#   assume_role_policy = jsonencode({
+#     Version : "2012-10-17",
+#     Statement : [{
+#       Effect    : "Allow",
+#       Principal : { Service : "pods.eks.amazonaws.com" },
+#       Action    : ["sts:AssumeRole", "sts:TagSession"]
+#     }]
+#   })
+# }
 
-resource "aws_iam_role_policy_attachment" "fastapi_attach" {
-  role       = aws_iam_role.fastapi_pod_role.name
-  policy_arn = aws_iam_policy.fastapi_secrets.arn
-}
+# resource "aws_iam_role_policy_attachment" "fastapi_attach" {
+#   role       = aws_iam_role.fastapi_pod_role.name
+#   policy_arn = aws_iam_policy.fastapi_secrets.arn
+# }
 
 
-# -------- K8s ServiceAccount
-resource "kubernetes_service_account" "fastapi_sa" {
-  metadata {
-    name      = "secrets-manager-sa"
-    namespace = "default"
-  }
-  automount_service_account_token = true
-}
+# # -------- K8s ServiceAccount
+# resource "kubernetes_service_account" "fastapi_sa" {
+#   metadata {
+#     name      = "secrets-manager-sa"
+#     namespace = "default"
+#   }
+#   automount_service_account_token = true
+# }
 
-resource "aws_eks_pod_identity_association" "fastapi_assoc" {
-  cluster_name    = aws_eks_cluster.cluster1.name
-  namespace       = kubernetes_service_account.fastapi_sa.metadata[0].namespace
-  service_account = kubernetes_service_account.fastapi_sa.metadata[0].name
-  role_arn        = aws_iam_role.fastapi_pod_role.arn
-}
+# resource "aws_eks_pod_identity_association" "fastapi_assoc" {
+#   cluster_name    = aws_eks_cluster.cluster1.name
+#   namespace       = kubernetes_service_account.fastapi_sa.metadata[0].namespace
+#   service_account = kubernetes_service_account.fastapi_sa.metadata[0].name
+#   role_arn        = aws_iam_role.fastapi_pod_role.arn
+# }
