@@ -17,7 +17,7 @@ spec:
       serviceAccountName: secrets-manager-sa  
       containers:
         - name: fastapi
-          image: 388796466496.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:latest
+          image: 588642314637.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
