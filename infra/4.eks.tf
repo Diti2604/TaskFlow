@@ -9,7 +9,7 @@ access_config {
   version  = "1.33"
 
   vpc_config {
-    endpoint_private_access = true
+    # endpoint_private_access = true
     endpoint_public_access  = true
     subnet_ids = slice(aws_subnet.private-subnets[*].id, 0, var.private_subnets_count)
   }
