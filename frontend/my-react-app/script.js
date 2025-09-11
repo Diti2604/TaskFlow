@@ -53,6 +53,7 @@ if (form) {
             try {
                 clone = response.clone();
                 data = await response.json();
+            // eslint-disable-next-line no-unused-vars
             } catch (err) {
                 const text = await clone.text();
                 console.error("Failed to parse JSON:", text);
