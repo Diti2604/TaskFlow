@@ -80,7 +80,67 @@ resource "helm_release" "aws_lb_controller" {
   })]
 }
 
+locals {
+  oidc_host  = replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")
+  secret_arn = data.aws_secretsmanager_secret.rds_master.arn
+}
 
+resource "aws_iam_policy" "secrets_read" {
+  name        = "eks-irsa-secretsmanager-read"
+  description = "IRSA: GetSecretValue on RDS master secret + CMK decrypt"
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   : "Allow",
+        Action   : ["secretsmanager:GetSecretValue"],
+        Resource : local.secret_arn
+      },
+      {
+        Effect   : "Allow",
+        Action   : ["kms:Decrypt"],
+        Resource : aws_kms_key.secrets_manager_password.arn
+      }
+    ]
+  })
+}
+
+# -------- IRSA role (trusts your cluster OIDC + this SA) ----------
+resource "aws_iam_role" "secrets_manager_irsa" {
+  name = "eks-secretsmanager-irsa"
+  assume_role_policy = jsonencode({
+    Version : "2012-10-17",
+    Statement : [{
+      Effect    : "Allow",
+      Principal : { Federated : aws_iam_openid_connect_provider.cluster.arn },
+      Action    : "sts:AssumeRoleWithWebIdentity",
+      Condition : {
+        StringEquals : {
+          "${local.oidc_host}:aud" : "sts.amazonaws.com",
+          "${local.oidc_host}:sub" : "system:serviceaccount:default:secrets-manager-sa"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "attach_secrets" {
+  role       = aws_iam_role.secrets_manager_irsa.name
+  policy_arn = aws_iam_policy.secrets_read.arn
+}
+
+# -------- K8s ServiceAccount with IRSA annotation ----------
+# (kubernetes provider must be configured to your cluster)
+resource "kubernetes_service_account" "secrets_manager_sa" {
+  metadata {
+    name      = "secrets-manager-sa"
+    namespace = "default"
+    annotations = {
+      "eks.amazonaws.com/role-arn" = aws_iam_role.secrets_manager_irsa.arn
+    }
+  }
+  automount_service_account_token = true
+}
 
 # resource "kubernetes_service_account" "secrets_manager_sa" {
 #   metadata {
