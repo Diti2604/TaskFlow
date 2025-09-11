@@ -92,7 +92,7 @@ resource "aws_iam_policy" "fastapi_secrets" {
     Version = "2012-10-17",
     Statement = [
       { "Effect":"Allow", "Action":["secretsmanager:GetSecretValue"], "Resource": data.aws_secretsmanager_secret.rds_master.arn },
-      { "Effect":"Allow", "Action":["kms:Decrypt"], "Resource": aws_kms_key.secrets_manager_password.arn }
+      { "Effect":"Allow", "Action":["kms:Decrypt"], "Resource": aws_kms_key.secrets-manager-password.arn }
     ]
   })
 }
