@@ -33,6 +33,7 @@ resource "aws_db_instance" "database-1" {
 resource "aws_security_group" "rds_sg" {
   name        = "rds-sg"
   description = "Allow inbound traffic to the RDS instance"
+  vpc_id      = aws_vpc.my-vpc.id
   ingress {
     from_port   = 3306
     to_port     = 3306
