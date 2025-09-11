@@ -134,8 +134,6 @@ jobs:
             # Apply deployment manifest (without serviceAccountName hardcoded)
             kubectl -n "${NS}" apply -f k8s/deployment.yaml
 
-            # Patch deployment to use the SA created by Terraform (idempotent)
-            # kubectl -n "${NS}" set serviceaccount deployment/${DEPLOY} "${SA_NAME}"
 
             # Set image
             kubectl -n "${NS}" set image deployment/${DEPLOY} fastapi="${REPOSITORY_URI}:${IMAGE_TAG}" --record=true
