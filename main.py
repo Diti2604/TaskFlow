@@ -16,7 +16,7 @@ app.add_middleware(
 
 # ---- Config (env) ----
 SECRET_NAME   = os.getenv("SECRET_NAME")        
-DATABASE_HOST = os.getenv("DATABASE_HOST")     
+DATABASE_ENDPOINT = os.getenv("DATABASE_ENDPOINT")
 AWS_REGION    = os.getenv("AWS_REGION", "us-east-1")
 DB_NAME       = os.getenv("DB_NAME", "database_1")
 BOOTSTRAP_ON_START = os.getenv("BOOTSTRAP_ON_START", "true").lower() == "true"
@@ -47,7 +47,7 @@ def _ensure_db_and_table():
     user, password = creds["username"], creds["password"]
 
     # 1) connect to server (no DB), this also proves network/DNS/SG work
-    conn = connect_mysql(DATABASE_HOST, user, password, database=None)
+    conn = connect_mysql(DATABASE_ENDPOINT, user, password, database=None)
     try:
         with conn:
             with conn.cursor() as cur:
@@ -58,7 +58,7 @@ def _ensure_db_and_table():
         conn.close()
 
     # 2) connect to DB and ensure table
-    conn_db = connect_mysql(DATABASE_HOST, user, password, database=DB_NAME)
+    conn_db = connect_mysql(DATABASE_ENDPOINT, user, password, database=DB_NAME)
     try:
         with conn_db:
             with conn_db.cursor() as cur:
@@ -76,7 +76,7 @@ def _ensure_db_and_table():
 
 def _bootstrap_worker(max_minutes=15):
     """Retry bootstrap in background without killing the process."""
-    if not (SECRET_NAME and DATABASE_HOST):
+    if not (SECRET_NAME and DATABASE_ENDPOINT):
         _log("Missing env vars; skip bootstrap.")
         return
 
@@ -112,7 +112,7 @@ def startup():
 def get_connection():
     try:
         creds = get_secret()
-        return connect_mysql(DATABASE_HOST, creds["username"], creds["password"], database=DB_NAME)
+        return connect_mysql(DATABASE_ENDPOINT, creds["username"], creds["password"], database=DB_NAME)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB connection failed: {e}")
 
