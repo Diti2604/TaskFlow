@@ -14,7 +14,7 @@ spec:
       labels:
         app: fastapi
     spec:
-      serviceAccountName: secrets-manager-sa  
+      # serviceAccountName: secrets-manager-sa  
       containers:
         - name: fastapi
           image: 588642314637.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:latest
