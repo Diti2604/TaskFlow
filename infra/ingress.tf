@@ -80,10 +80,10 @@ resource "helm_release" "aws_lb_controller" {
   })]
 }
 
-locals {
-  oidc_host  = replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")
-  secret_arn = data.aws_secretsmanager_secret.rds_master.arn
-}
+# locals {
+#   oidc_host  = replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")
+#   secret_arn = data.aws_secretsmanager_secret.rds_master.arn
+# }
 
 # resource "aws_iam_policy" "fastapi_secrets" {
 #   name        = "fastapi-secretsmanager-read"
