@@ -65,23 +65,23 @@ resource "kubernetes_service_account" "alb_controller" {
   automount_service_account_token = true
 }
 
-resource "helm_release" "aws_lb_controller" {
-  name       = "aws-load-balancer-controller"
-  repository = "https://aws.github.io/eks-charts"
-  chart      = "aws-load-balancer-controller"
-  namespace  = "kube-system"
-  depends_on = [kubernetes_service_account.alb_controller]
+# resource "helm_release" "aws_lb_controller" {
+#   name       = "aws-load-balancer-controller"
+#   repository = "https://aws.github.io/eks-charts"
+#   chart      = "aws-load-balancer-controller"
+#   namespace  = "kube-system"
+#   depends_on = [kubernetes_service_account.alb_controller]
 
-  values = [yamlencode({
-  clusterName = var.cluster_name
-  region      = var.aws_region
-  vpcId       = aws_vpc.my-vpc.id
-  serviceAccount = {
-    create = false
-    name   = kubernetes_service_account.alb_controller.metadata[0].name
-  }
-})]
-}
+#   values = [yamlencode({
+#   clusterName = var.cluster_name
+#   region      = var.aws_region
+#   vpcId       = aws_vpc.my-vpc.id
+#   serviceAccount = {
+#     create = false
+#     name   = kubernetes_service_account.alb_controller.metadata[0].name
+#   }
+# })]
+# }
 
 
 
