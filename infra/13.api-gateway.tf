@@ -23,6 +23,13 @@ resource "aws_apigatewayv2_api" "http" {
   name          = "http-api"
   protocol_type = "HTTP"
   depends_on    = [time_sleep.post_alb_buffer]
+
+   cors_configuration {
+    allow_origins  = ["*"]
+    allow_headers  = ["content-type", "authorization"]
+    allow_methods  = ["GET", "POST", "OPTIONS", "PATCH", "PUT", "DELETE", "HEAD", "*"]
+    expose_headers = []    
+  }
 }
 
 resource "aws_apigatewayv2_integration" "api-gateway-integration" {
