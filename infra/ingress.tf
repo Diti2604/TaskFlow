@@ -32,21 +32,24 @@ resource "kubernetes_ingress_v1" "fastapi" {
 }
 resource "aws_iam_role" "alb_controller_sa" {
   name = "alb-controller-sa-role"
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
       Effect = "Allow",
-      Principal = { Federated = aws_iam_openid_connect_provider.cluster.arn },
+      Principal = {
+        Federated = aws_iam_openid_connect_provider.cluster.arn
+      },
       Action = "sts:AssumeRoleWithWebIdentity",
       Condition = {
         StringEquals = {
+          "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:aud" = "sts.amazonaws.com",
           "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub" = "system:serviceaccount:kube-system:aws-load-balancer-controller"
         }
       }
     }]
   })
 }
-
 resource "aws_iam_role_policy_attachment" "alb_controller_attach" {
   role       = aws_iam_role.alb_controller_sa.name
   policy_arn = aws_iam_policy.eks-alb-policy.arn
@@ -70,15 +73,18 @@ resource "helm_release" "aws_lb_controller" {
   depends_on = [kubernetes_service_account.alb_controller]
 
   values = [yamlencode({
-    clusterName = var.cluster_name
-    region      = var.aws_region
-    vpcId       = aws_vpc.my-vpc.id
-    serviceAccount = {
-      create = false
-      name   = kubernetes_service_account.alb_controller.metadata[0].name
-    }
-  })]
+  clusterName = var.cluster_name
+  region      = var.aws_region
+  vpcId       = aws_vpc.my-vpc.id
+  serviceAccount = {
+    create = false
+    name   = kubernetes_service_account.alb_controller.metadata[0].name
+  }
+})]
 }
+
+
+
 
 # locals {
 #   oidc_host  = replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")
