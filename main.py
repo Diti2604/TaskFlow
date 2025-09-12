@@ -36,43 +36,52 @@ def get_secret():
     return json.loads(res["SecretString"])
 
 def connect_mysql(host, user, password, database=None):
+    # autocommit avoids needing an explicit commit and sidesteps "Already closed"
     return pymysql.connect(
-        host=host, user=user, password=password, database=database,
-        cursorclass=pymysql.cursors.DictCursor, connect_timeout=10,
+        host=host,
+        user=user,
+        password=password,
+        database=database,
+        autocommit=True,
+        cursorclass=pymysql.cursors.DictCursor,
+        connect_timeout=10,
     )
-
 def _ensure_db_and_table():
     """Idempotent creation of DB and users table."""
     creds = get_secret()
     user, password = creds["username"], creds["password"]
 
-    # 1) connect to server (no DB), this also proves network/DNS/SG work
+    # 1) connect to server (no DB), prove network/DNS/SG work
     conn = connect_mysql(DATABASE_HOST, user, password, database=None)
     try:
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(f"CREATE DATABASE IF NOT EXISTS {DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
-            conn.commit()
+        with conn.cursor() as cur:
+            cur.execute(
+                f"CREATE DATABASE IF NOT EXISTS {DB_NAME} "
+                "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+            )
         _log(f"Database {DB_NAME} ensured.")
     finally:
-        conn.close()
+        try: conn.close()
+        except Exception: pass
+
 
     # 2) connect to DB and ensure table
     conn_db = connect_mysql(DATABASE_HOST, user, password, database=DB_NAME)
     try:
-        with conn_db:
-            with conn_db.cursor() as cur:
-                cur.execute("""
-                    CREATE TABLE IF NOT EXISTS users (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        name VARCHAR(255) NOT NULL,
-                        password VARCHAR(255) NOT NULL
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-                """)
-            conn_db.commit()
+        # ensure the connection is live (reconnect=True will reopen if needed)
+        conn_db.ping(reconnect=True)
+        with conn_db.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    password VARCHAR(255) NOT NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """)
         _log("Table users ensured.")
     finally:
-        conn_db.close()
+        try: conn_db.close()
+        except Exception: pass
 
 def _bootstrap_worker(max_minutes=15):
     """Retry bootstrap in background without killing the process."""
@@ -112,7 +121,9 @@ def startup():
 def get_connection():
     try:
         creds = get_secret()
-        return connect_mysql(DATABASE_HOST, creds["username"], creds["password"], database=DB_NAME)
+        conn = connect_mysql(DATABASE_HOST, creds["username"], creds["password"], database=DB_NAME)
+        conn.ping(reconnect=True)
+        return conn
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB connection failed: {e}")
 
@@ -123,19 +134,30 @@ def root():
 @app.post("/users")
 def create_user(user: User):
     conn = get_connection()
-    with conn:
+    try:
         with conn.cursor() as cur:
-            cur.execute("INSERT INTO users (name, password) VALUES (%s, %s)", (user.name, user.password))
-        conn.commit()
+            cur.execute(
+                "INSERT INTO users (name, password) VALUES (%s, %s)",
+                (user.name, user.password),
+            )
+    finally:
+        try: conn.close()
+        except Exception: pass
     return {"message": "User created"}
 
 @app.post("/login")
 def login(user: User):
     conn = get_connection()
-    with conn:
+    try:
         with conn.cursor() as cur:
-            cur.execute("SELECT * FROM users WHERE name=%s AND password=%s", (user.name, user.password))
+            cur.execute(
+                "SELECT * FROM users WHERE name=%s AND password=%s",
+                (user.name, user.password),
+            )
             row = cur.fetchone()
+    finally:
+        try: conn.close()
+        except Exception: pass
     if not row:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     return {"message": f"Welcome, {user.name}!"}
