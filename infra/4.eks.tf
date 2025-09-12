@@ -98,10 +98,10 @@ resource "aws_eks_addon" "addon-4" {
   cluster_name = aws_eks_cluster.cluster1.name
   addon_name   = "coredns"
 }
-resource "aws_eks_addon" "addon-5" {
-  cluster_name = aws_eks_cluster.cluster1.name
-  addon_name   = "eks-pod-identity-agent"
-}
+  # resource "aws_eks_addon" "addon-5" {
+  #   cluster_name = aws_eks_cluster.cluster1.name
+  #   addon_name   = "eks-pod-identity-agent"
+  # }
 
 resource "aws_eks_addon" "pod_identity_agent" {
   cluster_name = aws_eks_cluster.cluster1.name

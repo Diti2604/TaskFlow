@@ -158,17 +158,24 @@ resource "aws_iam_policy" "fastapi_sm_kms" {
   })
 }
 
+data "aws_caller_identity" "current" {}
+
 resource "aws_iam_role" "fastapi_pod_identity" {
   name = "fastapi-pod-identity-role"
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
-      Effect = "Allow",
+      Effect    = "Allow",
       Principal = { Service = "pods.eks.amazonaws.com" },
       Action    = "sts:AssumeRole",
       Condition = {
-        StringEquals = { "aws:SourceAccount" = var.account_id },
-        ArnLike      = { "aws:SourceArn"     = "arn:aws:eks:${var.aws_region}:${var.account_id}:cluster/${var.cluster_name}" }
+        StringEquals = {
+          "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+        },
+        ArnLike = {
+          "aws:SourceArn" = "arn:aws:eks:${var.aws_region}:${data.aws_caller_identity.current.account_id}:cluster/${var.cluster_name}"
+        }
       }
     }]
   })
@@ -179,12 +186,14 @@ resource "aws_iam_role_policy_attachment" "fastapi_pod_identity_attach" {
   policy_arn = aws_iam_policy.fastapi_sm_kms.arn
 }
 
+
 resource "aws_eks_pod_identity_association" "fastapi" {
-  cluster_name   = var.cluster_name
-  namespace      = "default"
-  service_account= "secrets-manager-sa"
-  role_arn       = aws_iam_role.fastapi_pod_identity.arn
+  cluster_name    = var.cluster_name        
+  namespace       = "default"
+  service_account = "secrets-manager-sa"
+  role_arn        = aws_iam_role.fastapi_pod_identity.arn
 }
+
 
 resource "kubernetes_service_account" "secrets_manager_sa" {
   metadata {
