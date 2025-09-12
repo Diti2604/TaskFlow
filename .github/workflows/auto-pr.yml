@@ -2,21 +2,28 @@ name: Auto Create Pull Request
 
 on:
   push:
-    branches: 
-    - test
+    branches:
+      - test            
+
+permissions:
+  contents: write       
+  pull-requests: write 
+
 jobs:
   create-pull-request:
     runs-on: ubuntu-latest
-         
-    steps:                        
+    steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Create Pull Request
+        with:
+          fetch-depth: 0
+
+      - name: Create or update PR (test -> master)
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.ref_name }}
-          base: master
+          base: master                  
+          branch: ${{ github.ref_name }}  
           title: "Auto PR from ${{ github.ref_name }}"
           body: "This pull request was automatically created from branch ${{ github.ref_name }}."
           draft: false
