@@ -2,22 +2,43 @@ name: Auto Create Pull Request
 
 on:
   push:
-    branches-ignore:
-      - master  
+    branches:
+      - test
+
+permissions:
+  contents: read          # enough for gh to read commits
+  pull-requests: write    # needed to create/edit PRs
 
 jobs:
-  create-pull-request:
-    runs-on: linux-latest
-         
-    steps:                        
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.ref_name }}
-          base: master
-          title: "Auto PR from ${{ github.ref_name }}"
-          body: "This pull request was automatically created from branch ${{ github.ref_name }}."
-          draft: false
+          fetch-depth: 0
+
+      - name: Create or update PR test -> master
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BASE="master"
+          HEAD="${GITHUB_REF_NAME}"
+
+          # Only create a PR if test is ahead of master
+          git fetch origin "$BASE"
+          AHEAD=$(git rev-list --count origin/$BASE..HEAD)
+          if [ "$AHEAD" -eq 0 ]; then
+            echo "No commits ahead of $BASE; skipping PR."
+            exit 0
+          fi
+
+          # Update existing PR if present, else create new
+          num=$(gh pr list --head "$HEAD" --base "$BASE" --state open --json number -q '.[0].number' || true)
+          if [ -n "$num" ]; then
+            gh pr edit "$num" --title "Auto PR from $HEAD" --body "Auto-created PR from $HEAD."
+          else
+            gh pr create --base "$BASE" --head "$HEAD" \
+              --title "Auto PR from $HEAD" \
+              --body "Auto-created PR from $HEAD." \
+              --draft=false
+          fi
