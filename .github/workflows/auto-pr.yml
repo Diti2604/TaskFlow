@@ -2,7 +2,8 @@ name: Auto Create Pull Request
 
 on:
   push:
-    branches: [ master ]
+    branches-ignore: 
+    - master
 jobs:
   create-pull-request:
     runs-on: ubuntu-latest
