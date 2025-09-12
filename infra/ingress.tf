@@ -144,19 +144,14 @@ resource "aws_iam_role" "fastapi_pod_identity" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
-      Sid       = "EksPodIdentityTrust",
+      Sid       = "AllowEksAuthToAssumeRoleForPodIdentity",
       Effect    = "Allow",
       Principal = { Service = "pods.eks.amazonaws.com" },
-      Action    = "sts:AssumeRole",
-      Condition = {
-        StringEquals = {
-          "aws:SourceAccount" = data.aws_caller_identity.current.account_id,
-          "aws:SourceArn"     = data.aws_eks_cluster.this.arn
-        }
-      }
+      Action    = ["sts:AssumeRole", "sts:TagSession"]
     }]
   })
 }
+
 
 resource "aws_iam_role_policy_attachment" "fastapi_pod_identity_attach" {
   role       = aws_iam_role.fastapi_pod_identity.name
