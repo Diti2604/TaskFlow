@@ -139,7 +139,8 @@ jobs:
               BOOTSTRAP_ON_START='true'
 
             # set service account (Pod Identity association ties the role to this SA)
-            kubectl -n "${NS}" set serviceaccount "deployment/${DEPLOY}" "${SA_NAME}"
+            kubectl -n "$NS" set serviceaccount deployment/fastapi-deployment secrets-manager-sa
+   
 
             kubectl -n "${NS}" rollout status "deployment/${DEPLOY}" --timeout=180s
 
