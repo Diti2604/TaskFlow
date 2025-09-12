@@ -122,8 +122,14 @@ jobs:
             : "${IMAGE_TAG:?Missing IMAGE_TAG}"
 
             NS="${K8S_NAMESPACE}"
+            SA_NAME="secrets-manager-sa"
+            DEPLOY="fastapi-deployment"
+            ROLE_NAME="fastapi-pod-identity-role"
 
             kubectl get ns "${NS}" >/dev/null 2>&1 || kubectl create ns "${NS}"
+            echo "== Ensure ServiceAccount =="
+            kubectl -n "${NS}" get sa "${SA_NAME}" >/dev/null 2>&1 || \
+              kubectl -n "${NS}" create sa "${SA_NAME}"
 
             echo "== Service =="
             if ! kubectl -n "${NS}" get -f k8s/service.yaml >/dev/null 2>&1; then
@@ -150,7 +156,10 @@ jobs:
               DB_NAME='database_1' \
               AWS_REGION='${{ env.AWS_REGION }}'
 
-              
+            echo "== Set service account =="
+            # This patches spec.template.spec.serviceAccountName without editing YAML
+            kubectl -n "${NS}" set serviceaccount "deployment/${DEPLOY}" "${SA_NAME}"
+  
             echo "== Rollout status =="
             kubectl -n "${NS}" rollout status deployment/fastapi-deployment --timeout=180s
    

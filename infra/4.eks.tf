@@ -103,6 +103,12 @@ resource "aws_eks_addon" "addon-5" {
   addon_name   = "eks-pod-identity-agent"
 }
 
+resource "aws_eks_addon" "pod_identity_agent" {
+  cluster_name = aws_eks_cluster.cluster1.name
+  addon_name   = "eks-pod-identity-agent"
+}
+
+
 
 resource "aws_iam_role" "cluster-role" {
   name = "eks-cluster-iam-role"
