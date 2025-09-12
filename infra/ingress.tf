@@ -136,28 +136,6 @@ resource "helm_release" "aws_lb_controller" {
 #   })
 # }
 
-resource "aws_iam_policy" "fastapi_sm_kms" {
-  name        = "fastapi-secretsmanager-read"
-  description = "FastAPI pod may read the RDS master secret + decrypt with KMS"
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Sid: "ReadSecret",
-        Effect: "Allow",
-        Action: ["secretsmanager:GetSecretValue","secretsmanager:DescribeSecret"],
-        Resource: aws_db_instance.database-1.master_user_secret[0].secret_arn
-      },
-      {
-        Sid: "KmsDecrypt",
-        Effect: "Allow",
-        Action: ["kms:Decrypt"],
-        Resource: aws_kms_key.secrets-manager-password.arn
-      }
-    ]
-  })
-}
-
 data "aws_caller_identity" "current" {}
 
 resource "aws_iam_policy" "fastapi_sm_kms" {
@@ -227,12 +205,7 @@ resource "aws_iam_role_policy_attachment" "fastapi_unified_attach" {
   policy_arn = aws_iam_policy.fastapi_sm_kms.arn
 }
 
-resource "aws_eks_pod_identity_association" "fastapi" {
-  cluster_name    = var.cluster_name        
-  namespace       = "default"
-  service_account = "secrets-manager-sa"
-  role_arn        = aws_iam_role.fastapi_pod_identity.arn
-}
+
 
 
 resource "kubernetes_service_account" "secrets_manager_sa" {
