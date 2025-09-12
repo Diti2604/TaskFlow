@@ -138,92 +138,66 @@ resource "helm_release" "aws_lb_controller" {
 
 data "aws_caller_identity" "current" {}
 
-resource "aws_iam_policy" "fastapi_sm_kms" {
-  name        = "fastapi-secretsmanager-read"
-  description = "FastAPI pod may read the RDS master secret + decrypt with KMS"
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Sid: "ReadSecret",
-        Effect: "Allow",
-        Action: ["secretsmanager:GetSecretValue","secretsmanager:DescribeSecret"],
-        Resource: aws_db_instance.database-1.master_user_secret[0].secret_arn
-      },
-      {
-        Sid: "KmsDecrypt",
-        Effect: "Allow",
-        Action: ["kms:Decrypt"],
-        Resource: aws_kms_key.secrets-manager-password.arn
-      }
-    ]
-  })
-}
-
-# You must already have the OIDC provider resource/data (e.g. aws_iam_openid_connect_provider.cluster)
-
-resource "aws_iam_role" "fastapi_unified_role" {
-  name = "fastapi-unified-pod-irsa-role"
+resource "aws_iam_role" "fastapi_pod_identity" {
+  name = "fastapi-pod-identity-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [
-      # --- Pod Identity trust ---
-      {
-        Sid: "EksPodIdentityTrust",
-        Effect: "Allow",
-        Principal = { Service = "pods.eks.amazonaws.com" },
-        Action = "sts:AssumeRole",
-        Condition = {
-          StringEquals = {
-            "aws:SourceAccount" = data.aws_caller_identity.current.account_id,
-            "aws:SourceArn"     = data.aws_eks_cluster.this.arn
-          }
-        }
-      },
-      # --- IRSA (OIDC) trust ---
-      {
-        Sid: "EksIrsaTrust",
-        Effect: "Allow",
-        Principal = {
-          Federated = aws_iam_openid_connect_provider.cluster.arn
+    Statement = [{
+      Sid       = "EksPodIdentityTrust",
+      Effect    = "Allow",
+      Principal = { Service = "pods.eks.amazonaws.com" },
+      Action    = "sts:AssumeRole",
+      Condition = {
+        StringEquals = {
+          "aws:SourceAccount" = data.aws_caller_identity.current.account_id
         },
-        Action = "sts:AssumeRoleWithWebIdentity",
-        Condition = {
-          StringEquals = {
-            "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:aud" = "sts.amazonaws.com",
-            "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub" = "system:serviceaccount:${var.k8s_namespace}:${kubernetes_service_account.secrets_manager_sa.metadata[0].name}"
-          }
+        ArnLike = {
+          "aws:SourceArn" = "arn:aws:eks:${var.aws_region}:${data.aws_caller_identity.current.account_id}:cluster/${var.cluster_name}"
         }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "fastapi_pod_identity_attach" {
+  role       = aws_iam_role.fastapi_pod_identity.name
+  policy_arn = aws_iam_policy.fastapi_sm_kms.arn
+}
+
+resource "aws_iam_policy" "fastapi_sm_kms" {
+  name        = "fastapi-sm-kms-policy"
+  description = "Policy for FastAPI Secrets Manager and KMS access"
+  
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action   = "secretsmanager:GetSecretValue"
+        Effect   = "Allow"
+        Resource = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:fastapi-secret-*"
+      },
+      {
+        Action   = "kms:Decrypt"
+        Effect   = "Allow"
+        Resource = "arn:aws:kms:${var.aws_region}:${data.aws_caller_identity.current.account_id}:key/${aws_kms_key.secrets-manager-password.key_id}"
       }
     ]
   })
 }
-
-resource "aws_iam_role_policy_attachment" "fastapi_unified_attach" {
-  role       = aws_iam_role.fastapi_unified_role.name
-  policy_arn = aws_iam_policy.fastapi_sm_kms.arn
-}
-
-
-
 
 resource "kubernetes_service_account" "secrets_manager_sa" {
   metadata {
     name      = "secrets-manager-sa"
-    namespace = "default"  # e.g., "default"
-    annotations = {
-      # IRSA path (optional when using Pod Identity; harmless to keep)
-      "eks.amazonaws.com/role-arn" = aws_iam_role.fastapi_unified_role.arn
-    }
+    namespace = "default"
+    # <-- remove IRSA annotation here
   }
   automount_service_account_token = true
 }
 
-# Pod Identity association (required for Pod Identity)
 resource "aws_eks_pod_identity_association" "fastapi" {
   cluster_name    = var.cluster_name
   namespace       = "default"
   service_account = kubernetes_service_account.secrets_manager_sa.metadata[0].name
-  role_arn        = aws_iam_role.fastapi_unified_role.arn
+  role_arn        = aws_iam_role.fastapi_pod_identity.arn
 }
