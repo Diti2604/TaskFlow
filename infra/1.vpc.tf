@@ -112,9 +112,9 @@ resource "aws_route" "igw_default" {
   destination_cidr_block = "0.0.0.0/0"
   gateway_id = aws_internet_gateway.my-internet-gateway.id
 }
-resource "aws_ec2_instance_connect_endpoint" "ec2_instance_connect" {
-  subnet_id = aws_subnet.private-subnets[1].id
-  tags = {
-    Name = "ec2-instance-connect-endpoint"
-  }
-}
+# resource "aws_ec2_instance_connect_endpoint" "ec2_instance_connect" {
+#   subnet_id = aws_subnet.private-subnets[1].id
+#   tags = {
+#     Name = "ec2-instance-connect-endpoint"
+#   }
+# }
