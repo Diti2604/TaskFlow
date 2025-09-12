@@ -15,7 +15,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{ github.ref_name }}
-          base: main
+          base: master
           title: "Auto PR from ${{ github.ref_name }}"
           body: "This pull request was automatically created from branch ${{ github.ref_name }}."
           draft: false
