@@ -135,8 +135,8 @@ resource "helm_release" "aws_lb_controller" {
 #     ]
 #   })
 # }
-
 data "aws_caller_identity" "current" {}
+data "aws_eks_cluster" "this" { name = var.cluster_name }
 
 resource "aws_iam_role" "fastapi_pod_identity" {
   name = "fastapi-pod-identity-role"
@@ -150,10 +150,8 @@ resource "aws_iam_role" "fastapi_pod_identity" {
       Action    = "sts:AssumeRole",
       Condition = {
         StringEquals = {
-          "aws:SourceAccount" = data.aws_caller_identity.current.account_id
-        },
-        ArnLike = {
-          "aws:SourceArn" = "arn:aws:eks:${var.aws_region}:${data.aws_caller_identity.current.account_id}:cluster/${var.cluster_name}"
+          "aws:SourceAccount" = data.aws_caller_identity.current.account_id,
+          "aws:SourceArn"     = data.aws_eks_cluster.this.arn
         }
       }
     }]
@@ -166,34 +164,36 @@ resource "aws_iam_role_policy_attachment" "fastapi_pod_identity_attach" {
 }
 
 resource "aws_iam_policy" "fastapi_sm_kms" {
-  name        = "fastapi-sm-kms-policy"
-  description = "Policy for FastAPI Secrets Manager and KMS access"
-  
+  name        = "fastapi-secretsmanager-read"
+  description = "FastAPI pod may read the RDS master secret + decrypt with KMS"
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
       {
-        Action   = "secretsmanager:GetSecretValue"
-        Effect   = "Allow"
-        Resource = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:fastapi-secret-*"
+        Sid: "ReadSecret",
+        Effect: "Allow",
+        Action: ["secretsmanager:GetSecretValue","secretsmanager:DescribeSecret"],
+        Resource: aws_db_instance.database-1.master_user_secret[0].secret_arn
       },
       {
-        Action   = "kms:Decrypt"
-        Effect   = "Allow"
-        Resource = "arn:aws:kms:${var.aws_region}:${data.aws_caller_identity.current.account_id}:key/${aws_kms_key.secrets-manager-password.key_id}"
+        Sid: "KmsDecrypt",
+        Effect: "Allow",
+        Action: ["kms:Decrypt"],
+        Resource: aws_kms_key.secrets-manager-password.arn
       }
     ]
   })
 }
 
+
 resource "kubernetes_service_account" "secrets_manager_sa" {
   metadata {
     name      = "secrets-manager-sa"
     namespace = "default"
-    # <-- remove IRSA annotation here
   }
   automount_service_account_token = true
 }
+
 
 resource "aws_eks_pod_identity_association" "fastapi" {
   cluster_name    = var.cluster_name
@@ -201,3 +201,4 @@ resource "aws_eks_pod_identity_association" "fastapi" {
   service_account = kubernetes_service_account.secrets_manager_sa.metadata[0].name
   role_arn        = aws_iam_role.fastapi_pod_identity.arn
 }
+
