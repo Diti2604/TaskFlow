@@ -136,7 +136,7 @@ resource "helm_release" "aws_lb_controller" {
 #   })
 # }
 data "aws_caller_identity" "current" {}
-data "aws_eks_cluster" "this" { name = var.cluster_name }
+# data "aws_eks_cluster" "this" { name = var.cluster_name }
 
 resource "aws_iam_role" "fastapi_pod_identity" {
   name = "fastapi-pod-identity-role"
