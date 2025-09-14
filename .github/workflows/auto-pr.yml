@@ -2,8 +2,8 @@ name: Auto Create Pull Request
 
 on:
   push:
-    branches-ignore:
-      - master
+    branches:
+      - test
 
 permissions:
   contents: read
