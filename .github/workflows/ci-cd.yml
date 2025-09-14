@@ -64,7 +64,7 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
         run: terraform apply -auto-approve tfplan  
 
-  build-and-deploy:
+  deploy-to-eks:
       runs-on: ubuntu-latest
       needs: [terraform]
       steps:
