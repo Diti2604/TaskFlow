@@ -1,0 +1,23 @@
+name: Auto Create Pull Request
+
+on:
+  push:
+    branches-ignore:
+      - main  
+
+jobs:
+  create-pull-request:
+    runs-on: linux-latest
+         
+    steps:                        
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref_name }}
+          base: main
+          title: "Auto PR from ${{ github.ref_name }}"
+          body: "This pull request was automatically created from branch ${{ github.ref_name }}."
+          draft: false
