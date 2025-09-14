@@ -14,7 +14,6 @@ app.add_middleware(
     allow_origins=[""], allow_credentials=True, allow_methods=[""], allow_headers=["*"]
 )
 
-# ---- Config (env) ----
 SECRET_NAME   = os.getenv("SECRET_NAME")        
 DATABASE_HOST = os.getenv("DATABASE_HOST")     
 AWS_REGION    = os.getenv("AWS_REGION", "us-east-1")
@@ -25,7 +24,7 @@ class User(BaseModel):
     name: str
     password: str
 
-def _log(msg):  # tiny helper
+def _log(msg): 
     print(f"[bootstrap] {msg}", flush=True)
 
 def get_secret():
@@ -36,7 +35,6 @@ def get_secret():
     return json.loads(res["SecretString"])
 
 def connect_mysql(host, user, password, database=None):
-    # autocommit avoids needing an explicit commit and sidesteps "Already closed"
     return pymysql.connect(
         host=host,
         user=user,
@@ -51,7 +49,6 @@ def _ensure_db_and_table():
     creds = get_secret()
     user, password = creds["username"], creds["password"]
 
-    # 1) connect to server (no DB), prove network/DNS/SG work
     conn = connect_mysql(DATABASE_HOST, user, password, database=None)
     try:
         with conn.cursor() as cur:
@@ -65,10 +62,8 @@ def _ensure_db_and_table():
         except Exception: pass
 
 
-    # 2) connect to DB and ensure table
     conn_db = connect_mysql(DATABASE_HOST, user, password, database=DB_NAME)
     try:
-        # ensure the connection is live (reconnect=True will reopen if needed)
         conn_db.ping(reconnect=True)
         with conn_db.cursor() as cur:
             cur.execute("""
@@ -104,7 +99,6 @@ def _bootstrap_worker(max_minutes=15):
         except Exception as e:
             _log(f"Bootstrap failed: {e}. Will retry.")
 
-        # exponential backoff with cap (2,4,8,... max 30s)
         sleep_s = min(30, 2 ** attempt)
         time.sleep(sleep_s)
 
@@ -115,7 +109,6 @@ def startup():
     if not BOOTSTRAP_ON_START:
         _log("BOOTSTRAP_ON_START=false; skipping schema bootstrap.")
         return
-    # run in background so failures don't crash app
     threading.Thread(target=_bootstrap_worker, daemon=True).start()
 
 def get_connection():
