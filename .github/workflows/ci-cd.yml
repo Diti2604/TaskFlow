@@ -64,12 +64,12 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
     permissions:
-      contents: write          # REQUIRED to create refs/heads/release
+      contents: write
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Open or update PR master -> release
+      - name: Open or update PR master -> release (with diagnostics)
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -78,43 +78,65 @@ jobs:
             const head = 'master';
             const base = 'release';
 
-            // Ensure base branch exists (create from master if missing)
-            let baseExists = true;
-            try {
-              await github.rest.git.getRef({ owner, repo, ref: `heads/${base}` });
-            } catch (e) {
-              baseExists = false;
+            async function ensureBaseBranch() {
+              try {
+                await github.rest.git.getRef({ owner, repo, ref: `heads/${base}` });
+                core.info(`Branch '${base}' exists.`);
+              } catch (e) {
+                core.info(`Branch '${base}' missing. Creating from 'master'...`);
+                const { data: masterRef } = await github.rest.git.getRef({ owner, repo, ref: 'heads/master' });
+                await github.rest.git.createRef({
+                  owner, repo,
+                  ref: `refs/heads/${base}`,
+                  sha: masterRef.object.sha
+                });
+                core.info(`Created '${base}' at ${masterRef.object.sha}.`);
+              }
             }
-            if (!baseExists) {
-              const { data: masterRef } = await github.rest.git.getRef({ owner, repo, ref: 'heads/master' });
-              await github.rest.git.createRef({
-                owner, repo,
-                ref: `refs/heads/${base}`,
-                sha: masterRef.object.sha
+
+            async function compareBranches() {
+              const cmp = await github.rest.repos.compareCommits({ owner, repo, base, head });
+              core.info(`Compare ${head} -> ${base}: status=${cmp.data.status}, ahead_by=${cmp.data.ahead_by}, behind_by=${cmp.data.behind_by}, total_commits=${cmp.data.total_commits}`);
+              return cmp.data;
+            }
+
+            async function findExistingPR() {
+              const { data } = await github.rest.pulls.list({
+                owner, repo, state: 'open', head: `${owner}:${head}`, base
               });
-              core.info(`Created ${base} branch from master.`);
+              if (data.length) core.info(`Existing PR found: #${data[0].number}`);
+              return data[0];
             }
 
-            // Skip if nothing new on master vs release
-            const cmp = await github.rest.repos.compareCommits({ owner, repo, base, head });
-            if (cmp.data.status === 'identical' || cmp.data.ahead_by === 0) {
-              core.info(`No differences between ${head} and ${base}. Skipping PR.`);
+            await ensureBaseBranch();
+            const cmp = await compareBranches();
+
+            if (cmp.status === 'identical' || cmp.ahead_by === 0) {
+              core.info(`No commits on '${head}' ahead of '${base}'. PR cannot be created (GitHub requires diffs).`);
+              core.notice('Tip: If you want a PR every time, keep release behind master (don’t fast-forward it) or protect release to require PRs.');
               return;
             }
 
-            // Reuse open PR if present
-            const { data: existing } = await github.rest.pulls.list({
-              owner, repo, state: 'open', head: `${owner}:${head}`, base
-            });
-            if (existing.length) {
-              core.info(`PR already open: #${existing[0].number}`);
-              return;
-            }
+            const existing = await findExistingPR();
+            if (existing) return; // Reuse open PR, nothing to do
 
-            const title = `Auto PR: ${head} → ${base}`;
-            const body = 'Auto-created after push to master.';
-            const { data: pr } = await github.rest.pulls.create({ owner, repo, head, base, title, body, draft: false });
-            core.info(`Created PR #${pr.number}`);
+            try {
+              const title = `Auto PR: ${head} → ${base}`;
+              const body  = 'Auto-created after push to master.';
+              const { data: pr } = await github.rest.pulls.create({ owner, repo, head, base, title, body, draft: false });
+              core.info(`Created PR #${pr.number}`);
+            } catch (e) {
+              if (e.status === 422) {
+                core.warning(`PR creation returned 422. Message: ${e.message}`);
+                core.warning('This usually means a PR already exists or there are no commits between the branches.');
+                const existing2 = await findExistingPR();
+                if (!existing2) {
+                  core.notice('No open PR found. Verify there is at least one commit on master not in release.');
+                }
+              } else {
+                throw e;
+              }
+            }
 
   terraform:
     runs-on: ubuntu-latest
