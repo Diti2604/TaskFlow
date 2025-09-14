@@ -2,52 +2,22 @@ name: Auto Create Pull Request
 
 on:
   push:
-    branches:
-      - test
-
-permissions:
-  contents: read
-  pull-requests: write
+    branches-ignore:
+      - main  
 
 jobs:
-  open-pr:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Open or update PR from branch to master
-        uses: actions/github-script@v7
+  create-pull-request:
+    runs-on: linux-latest
+         
+    steps:                        
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const { owner, repo } = context.repo;
-            const head = context.ref.replace('refs/heads/', ''); // e.g. "test"
-            const base = 'master';
-
-            // Ensure there are commits to compare
-            const compare = await github.rest.repos.compareCommits({
-              owner, repo, base, head
-            });
-
-            if (compare.data.status === 'identical' || compare.data.ahead_by === 0) {
-              core.info('No differences between head and base. Skipping PR.');
-              return;
-            }
-
-            // Reuse existing PR if present
-            const existing = await github.rest.pulls.list({
-              owner, repo, state: 'open', head: `${owner}:${head}`, base
-            });
-
-            if (existing.data.length > 0) {
-              core.info(`PR already open: #${existing.data[0].number}`);
-              return;
-            }
-
-            const pr = await github.rest.pulls.create({
-              owner, repo,
-              title: `Auto PR from ${head}`,
-              head, base,
-              body: `This pull request was automatically created from branch ${head}.`
-            });
-            core.info(`Opened PR #${pr.data.number}`);
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref_name }}
+          base: main
+          title: "Auto PR from ${{ github.ref_name }}"
+          body: "This pull request was automatically created from branch ${{ github.ref_name }}."
+          draft: false
