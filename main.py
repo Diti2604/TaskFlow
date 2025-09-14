@@ -121,7 +121,7 @@ def get_connection():
 
 @app.get("/")
 def root():
-    return {"Hello from FastAPI on EC23456!"}
+    return {"Hello from FastAPI on EC2345"}
 
 @app.post("/users")
 def create_user(user: User):
