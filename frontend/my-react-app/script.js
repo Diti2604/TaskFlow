@@ -4,7 +4,7 @@
     const submitBtn = document.getElementById('submit-btn');
     let isLogin = true;
 
-    const apiUrl = 'https://zago9bm7n8.execute-api.us-east-1.amazonaws.com';
+    const apiUrl = 'https://v7d01fhbz4.execute-api.us-east-1.amazonaws.com';
 
     // Enhanced alert system
     function showCustomAlert(type, title, message, duration = 5000) {
