@@ -5,7 +5,12 @@ metadata:
   labels:
     app: fastapi
 spec:
-  replicas: 2
+  replicas: 3
+  strategy:
+   type: RollingUpdate
+   rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
   selector:
     matchLabels:
       app: fastapi
@@ -14,7 +19,6 @@ spec:
       labels:
         app: fastapi
     spec:
-      # serviceAccountName: secrets-manager-sa  
       containers:
         - name: fastapi
           image: 545829658421.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:latest
