@@ -62,12 +62,17 @@ resource "kubernetes_service_account" "alb_controller" {
   automount_service_account_token = true
 }
 
+resource "time_sleep" "pre_alb_buffer" {
+  depends_on      = [aws_eks_cluster.cluster1]
+  create_duration = "1m"
+}
+
 resource "helm_release" "aws_lb_controller" {
   name       = "aws-load-balancer-controller"
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
-  depends_on = [kubernetes_service_account.alb_controller]
+  depends_on = [kubernetes_service_account.alb_controller, time_sleep.pre_alb_buffer]
 
   values = [yamlencode({
     clusterName = var.cluster_name
