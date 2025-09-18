@@ -1,45 +1,36 @@
-name: PR test → master (gh CLI)
-
-on:
-  push:
-    branches-ignore: [ master ]
-
 permissions:
   contents: write
   pull-requests: write
 
+on:
+  push:
+    branches: [ test ]
+
 jobs:
-  open-or-update-pr:
+  pr:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { ref: test, fetch-depth: 0 }
+        with:
+          ref: test
+          fetch-depth: 0
+          persist-credentials: true   # needed to push
 
-      - name: Install GitHub CLI
-        run: sudo apt-get update && sudo apt-get install -y gh
+      - name: Create ephemeral branch
+        run: |
+          git checkout -b "test-pr-${GITHUB_SHA}"
+          git push origin "test-pr-${GITHUB_SHA}"
 
-      - name: Open or update via REST
-        if: steps.diffcheck.outputs.nodiff == 'false'
+      - name: Open PR to master
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const {owner, repo} = context.repo;
-            const head = 'test';
-            const base = 'master';
-
-            // Reuse existing PR if open
-            const prs = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${head}`, base });
-            if (prs.data.length) {
-              await github.rest.pulls.update({
-                owner, repo, pull_number: prs.data[0].number,
-                title: 'Promote test → master',
-                body: 'Sync master with latest from test.'
-              });
-            } else {
-              await github.rest.pulls.create({
-                owner, repo, head, base,
-                title: 'Promote test → master',
-                body: 'Sync master with latest from test.'
-              });
-            }
+            await github.rest.pulls.create({
+              owner, repo,
+              head: `test-pr-${process.env.GITHUB_SHA}`,  // new branch
+              base: 'master',
+              title: 'Promote test → master',
+              body: 'Automated PR from latest test push.'
+            });
