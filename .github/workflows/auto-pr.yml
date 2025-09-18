@@ -1,8 +1,7 @@
-name: Create test  pull request
-
+name: Create PR from test to master
 on:
   push:
-    branches: [ master ]
+    branches: [ test ]
 
 permissions:
   contents: write
@@ -17,16 +16,11 @@ jobs:
           ref: test
           fetch-depth: 0
 
-      - name: Reset promotion branch to master
-        run: |
-          git fetch origin master
-          git reset --hard origin/master
-
-      - name: Create Pull Request
+      - name: Open or update PR test → master
         uses: peter-evans/create-pull-request@v7
         with:
-          branch: test-promotion   
-          base: test               
-          title: "Promote master → test"
-          body: "Sync test with latest from master."
-          commit-message: "chore: promote master → test"
+          branch: test          
+          base: master             
+          title: "Promote test → master"
+          body: "Sync master with latest from test."
+          commit-message: "chore: promote test → master"
