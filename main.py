@@ -44,7 +44,6 @@ def connect_mysql(host, user, password, database=None):
         connect_timeout=10,
     )
 def _ensure_db_and_table():
-    """Idempotent creation of DB and users table."""
     creds = get_secret()
     user, password = creds["username"], creds["password"]
 
@@ -78,7 +77,6 @@ def _ensure_db_and_table():
         except Exception: pass
 
 def _bootstrap_worker(max_minutes=15):
-    """Retry bootstrap in background without killing the process."""
     if not (SECRET_NAME and DATABASE_HOST):
         _log("Missing env vars; skip bootstrap.")
         return
