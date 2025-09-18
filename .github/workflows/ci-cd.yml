@@ -1,9 +1,13 @@
 name: CI/CD Pipeline
 on:
-  # push:
-  #   branches: [ master ]
   pull_request:
-    branches: [ master ]
+    branches: [ master ]             # run on PRs into master (plan/validate only)
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [ master ]             # run after PR is merged
+  workflow_run:                       # needed only if you auto-merge via a workflow using GITHUB_TOKEN
+    workflows: ["PR test → master (auto-merge)"]
+    types: [completed]
 
 env:
   AWS_REGION: us-east-1
