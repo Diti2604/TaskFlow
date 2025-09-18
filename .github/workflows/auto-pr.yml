@@ -1,4 +1,3 @@
-# .github/workflows/auto-pr.yml
 name: PR test → master (single rolling)
 on:
   push:
