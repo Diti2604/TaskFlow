@@ -1,32 +1,44 @@
-name: Create production promotion pull request
+name: PR test → master (gh CLI)
 
 on:
   push:
-    branches: [ master ]
+    branches-ignore: [ master ]
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  productionPromotion:
+  open-or-update-pr:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: production
-          fetch-depth: 0
+        with: { ref: test, fetch-depth: 0 }
 
-      - name: Reset promotion branch to master
+      - name: Install GitHub CLI
+        run: sudo apt-get update && sudo apt-get install -y gh
+
+      - name: Ensure diff exists
+        id: diffcheck
         run: |
           git fetch origin master
-          git reset --hard origin/master
+          if git diff --quiet origin/master...HEAD; then
+            echo "nodiff=true" >> $GITHUB_OUTPUT
+          else
+            echo "nodiff=false" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v7
-        with:
-          branch: production-promotion   
-          base: production               
-          title: "Promote master → production"
-          body: "Sync production with latest from master."
-          commit-message: "chore: promote master → production"
+      - name: Open or update PR test → master
+        if: steps.diffcheck.outputs.nodiff == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Reuse existing PR if present; else create
+          if gh pr list --base master --head test --state open --json number --jq 'length>0'; then
+            num=$(gh pr list --base master --head test --state open --json number --jq '.[0].number')
+            gh pr edit "$num" --title "Promote test → master" --body "Sync master with latest from test."
+          else
+            gh pr create --base master --head test \
+              --title "Promote test → master" \
+              --body  "Sync master with latest from test."
+          fi
