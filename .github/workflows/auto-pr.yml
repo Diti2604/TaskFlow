@@ -1,45 +1,62 @@
-name: PR test → master (gh CLI)
+name: PR test → master (auto-merge)
 
 on:
   push:
-    branches-ignore: [ master ]
+    branches-ignore: [ master ] 
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  open-or-update-pr:
+  open-or-merge-pr:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with: { ref: test, fetch-depth: 0 }
 
-      - name: Install GitHub CLI
-        run: sudo apt-get update && sudo apt-get install -y gh
-
-      - name: Open or update via REST
-        if: steps.diffcheck.outputs.nodiff == 'false'
+      - name: Open or merge PR via REST
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const {owner, repo} = context.repo;
+            const { owner, repo } = context.repo;
             const head = 'test';
             const base = 'master';
 
-            // Reuse existing PR if open
-            const prs = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${head}`, base });
-            if (prs.data.length) {
+            // Look for existing PR
+            let pr = await github.rest.pulls.list({
+              owner, repo, state: 'open', head: `${owner}:${head}`, base
+            });
+
+            let prNumber;
+            if (pr.data.length) {
+              prNumber = pr.data[0].number;
+              core.info(`Found existing PR #${prNumber}, updating title/body...`);
               await github.rest.pulls.update({
-                owner, repo, pull_number: prs.data[0].number,
+                owner, repo, pull_number: prNumber,
                 title: 'Promote test → master',
                 body: 'Sync master with latest from test.'
               });
             } else {
-              await github.rest.pulls.create({
+              core.info('No open PR, creating one...');
+              const created = await github.rest.pulls.create({
                 owner, repo, head, base,
                 title: 'Promote test → master',
                 body: 'Sync master with latest from test.'
               });
+              prNumber = created.data.number;
+              core.info(`Created PR #${prNumber}`);
+            }
+
+            // Merge immediately
+            core.info(`Merging PR #${prNumber}...`);
+            try {
+              await github.rest.pulls.merge({
+                owner, repo, pull_number: prNumber,
+                merge_method: 'merge' // could also use 'squash' or 'rebase'
+              });
+              core.info('PR merged successfully!');
+            } catch (error) {
+              core.setFailed(`Merge failed: ${error.message}`);
             }
