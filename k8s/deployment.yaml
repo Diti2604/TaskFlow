@@ -6,6 +6,7 @@ metadata:
     app: fastapi
 spec:
   replicas: 3
+  maxUnavailable: 0
   selector:
     matchLabels:
       app: fastapi
