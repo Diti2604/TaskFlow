@@ -22,7 +22,7 @@ BOOTSTRAP_ON_START = os.getenv("BOOTSTRAP_ON_START", "true").lower() == "true"
 class User(BaseModel):
     name: str
     password: str
-
+    
 def _log(msg): 
     print(f"[bootstrap] {msg}", flush=True)
 
@@ -43,6 +43,7 @@ def connect_mysql(host, user, password, database=None):
         cursorclass=pymysql.cursors.DictCursor,
         connect_timeout=10,
     )
+    
 def _ensure_db_and_table():
     creds = get_secret()
     user, password = creds["username"], creds["password"]
@@ -69,7 +70,7 @@ def _ensure_db_and_table():
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     name VARCHAR(255) NOT NULL,
                     password VARCHAR(255) NOT NULL
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                )
             """)
         _log("Table users ensured.")
     finally:
