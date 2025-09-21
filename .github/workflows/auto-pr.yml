@@ -23,7 +23,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git push -f origin HEAD:test-pr
 
-      - name: Open/Update PR
+      - name: Open PR
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
