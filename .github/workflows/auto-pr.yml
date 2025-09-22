@@ -1,8 +1,5 @@
 name: PR test → master
 on:
-  pull_request:
-    branches: [ master ]
-    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [ master ] 
 
