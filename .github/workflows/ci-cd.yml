@@ -1,7 +1,5 @@
 name: CI/CD Pipeline
 on:
-  # push:
-  #   branches: [ master ]
   pull_request:
     branches: [ test ]
 
@@ -27,9 +25,6 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-   
-      - name: Install jq 
-        run: sudo apt-get update && sudo apt-get install -y jq
       
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
