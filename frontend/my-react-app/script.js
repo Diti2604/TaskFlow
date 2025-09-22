@@ -6,9 +6,7 @@
 
     const apiUrl = 'https://qxad6u5lp2.execute-api.us-east-1.amazonaws.com';
 
-    // Enhanced alert system
     function showCustomAlert(type, title, message, duration = 5000) {
-      // Remove any existing alerts
       const existingAlert = document.querySelector('.custom-alert');
       if (existingAlert) {
         existingAlert.remove();
