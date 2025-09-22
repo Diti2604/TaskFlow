@@ -1,7 +1,7 @@
 name: PR test → master
 on:
   push:
-    branches: [ master ] 
+    branches: [ test ] 
 
 permissions:
   contents: write
