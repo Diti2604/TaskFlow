@@ -90,11 +90,11 @@ resource "aws_route_table" "my-public-RTs" {
   }
 }
 
-resource "aws_route_table_association" "table-association-of-my-private-RTs" {
-  count = var.table-association-of-my-private-RTs-count
-  subnet_id      = aws_subnet.private-subnets[count.index].id
-  route_table_id = aws_route_table.my-private-RTs[count.index].id
-}
+# resource "aws_route_table_association" "table-association-of-my-private-RTs" {
+#   count = var.table-association-of-my-private-RTs-count
+#   subnet_id      = aws_subnet.private-subnets[count.index].id
+#   route_table_id = aws_route_table.my-private-RTs[count.index].id
+# }
 resource "aws_route_table_association" "table-association-of-my-public-RTs" {
   count = var.table-association-of-my-public-RTs-count
   subnet_id      = aws_subnet.public-subnets[count.index].id
