@@ -4,7 +4,7 @@
     const submitBtn = document.getElementById('submit-btn');
     let isLogin = true;
 
-    const apiUrl = 'https://qxad6u5lp2.execute-api.us-east-1.amazonaws.com';
+    const apiUrl = 'https://70u32w6j67.execute-api.us-east-1.amazonaws.com';
 
     function showCustomAlert(type, title, message, duration = 5000) {
       const existingAlert = document.querySelector('.custom-alert');
@@ -31,20 +31,11 @@
       `;
 
       document.body.appendChild(alert);
-
-      // Show the alert
       setTimeout(() => alert.classList.add('show'), 10);
-
-      // Close button functionality
       const closeBtn = alert.querySelector('.alert-close');
       closeBtn.addEventListener('click', () => hideAlert(alert));
-
-      // Auto-hide after duration
       const timeoutId = setTimeout(() => hideAlert(alert), duration);
-
-      // Clear timeout if manually closed
       closeBtn.addEventListener('click', () => clearTimeout(timeoutId));
-
       return alert;
     }
 
@@ -57,12 +48,10 @@
       }, 400);
     }
 
-    // Debug function
     const debugLog = (message) => {
       console.log(`[DEBUG] ${message}`);
     };
 
-    // Toggle form functionality
     if (toggleForm) {
       toggleForm.addEventListener('click', () => {
         debugLog(`Toggling form: isLogin was ${isLogin}`);
@@ -76,7 +65,6 @@
       console.error('Toggle form element not found');
     }
 
-    // Form submission
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -87,10 +75,8 @@
 
         debugLog(`Submitting ${isLogin ? 'login' : 'signup'} for username: ${username}`);
 
-        // Add loading state
         submitBtn.classList.add('loading');
         submitBtn.textContent = '';
-
         try {
           const response = await fetch(`${apiUrl}${endpoint}`, {
             method: 'POST',
@@ -140,7 +126,6 @@
             throw new Error(`${errorTitle}|${errorMessage}`);
           }
 
-          // Success handling
           if (isLogin) {
             showCustomAlert(
               'success',
@@ -159,7 +144,6 @@
 
           form.reset();
 
-          // If signup, switch to login form after a delay
           if (!isLogin) {
             setTimeout(() => {
               isLogin = true;
@@ -176,7 +160,6 @@
           let errorTitle = 'Connection Error';
           let errorMessage = error.message;
 
-          // Parse custom error format
           if (error.message.includes('|')) {
             const parts = error.message.split('|');
             errorTitle = parts[0];
@@ -191,7 +174,6 @@
 
           showCustomAlert('error', errorTitle, errorMessage, 8000);
         } finally {
-          // Remove loading state
           submitBtn.classList.remove('loading');
           submitBtn.textContent = isLogin ? 'Login' : 'Sign Up';
         }
