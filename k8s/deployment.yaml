@@ -6,6 +6,11 @@ metadata:
     app: fastapi
 spec:
   replicas: 2
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0       
+      maxSurge: 1              
+    type: RollingUpdate
   selector:
     matchLabels:
       app: fastapi
@@ -14,12 +19,29 @@ spec:
       labels:
         app: fastapi
     spec:
+      terminationGracePeriodSeconds: 60
       containers:
         - name: fastapi
           image: 867212421771.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
+          readinessProbe:
+            httpGet: { path: /, port: 8000 }
+            initialDelaySeconds: 3
+            periodSeconds: 3
+            timeoutSeconds: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: { path: /, port: 8000 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh","-c","sleep 30"] 
           resources:
             requests:
               cpu: "100m"        
