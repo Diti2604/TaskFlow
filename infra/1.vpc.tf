@@ -56,27 +56,27 @@ resource "aws_eip" "elastic-ip-addresses" {
   ]
 }
 
-# resource "aws_nat_gateway" "nat-gateways" {
-#   count = var.nat_gateway_count
-#   allocation_id = aws_eip.elastic-ip-addresses[count.index].id
-#   subnet_id     = aws_subnet.public-subnets[count.index].id
+resource "aws_nat_gateway" "nat-gateways" {
+  count = var.nat_gateway_count
+  allocation_id = aws_eip.elastic-ip-addresses[count.index].id
+  subnet_id     = aws_subnet.public-subnets[count.index].id
 
-#   tags = {
-#     Name = "nat-gateway-${count.index}"
-#   }
-# }
+  tags = {
+    Name = "nat-gateway-${count.index}"
+  }
+}
 
-# resource "aws_route_table" "my-private-RTs" {
-#   count = var.private_route_table_count
-#   vpc_id = aws_vpc.my-vpc.id
-#   route {
-#     cidr_block     = var.route_table_cidr_block
-#     # nat_gateway_id = aws_nat_gateway.nat-gateways[count.index].id
-#   }
-#   tags = {
-#     Name = "my-private-RT-${count.index}"
-#   }
-# }
+resource "aws_route_table" "my-private-RTs" {
+  count = var.private_route_table_count
+  vpc_id = aws_vpc.my-vpc.id
+  route {
+    cidr_block     = var.route_table_cidr_block
+    nat_gateway_id = aws_nat_gateway.nat-gateways[count.index].id
+  }
+  tags = {
+    Name = "my-private-RT-${count.index}"
+  }
+}
 
 resource "aws_route_table" "my-public-RTs" {
   count = var.public_route_table_count
@@ -90,11 +90,11 @@ resource "aws_route_table" "my-public-RTs" {
   }
 }
 
-# resource "aws_route_table_association" "table-association-of-my-private-RTs" {
-#   count = var.table-association-of-my-private-RTs-count
-#   subnet_id      = aws_subnet.private-subnets[count.index].id
-#   route_table_id = aws_route_table.my-private-RTs[count.index].id
-# }
+resource "aws_route_table_association" "table-association-of-my-private-RTs" {
+  count = var.table-association-of-my-private-RTs-count
+  subnet_id      = aws_subnet.private-subnets[count.index].id
+  route_table_id = aws_route_table.my-private-RTs[count.index].id
+}
 resource "aws_route_table_association" "table-association-of-my-public-RTs" {
   count = var.table-association-of-my-public-RTs-count
   subnet_id      = aws_subnet.public-subnets[count.index].id
