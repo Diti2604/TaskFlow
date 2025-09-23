@@ -18,9 +18,9 @@ resource "aws_security_group" "apigw_vpclink_sg" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = [var.vpc_cidr_block[0], var.vpc_cidr_block[1]]
+    cidr_blocks = var.vpc_private_cidr_blocks
 }
   tags = {
-    Name = "apigw-vpclink-sg"
+    Name = "apigw_vpclink_sg"
   }
 }
