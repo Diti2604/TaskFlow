@@ -66,17 +66,17 @@ resource "aws_eip" "elastic-ip-addresses" {
 #   }
 # }
 
-resource "aws_route_table" "my-private-RTs" {
-  count = var.private_route_table_count
-  vpc_id = aws_vpc.my-vpc.id
-  route {
-    cidr_block     = var.route_table_cidr_block
-    # nat_gateway_id = aws_nat_gateway.nat-gateways[count.index].id
-  }
-  tags = {
-    Name = "my-private-RT-${count.index}"
-  }
-}
+# resource "aws_route_table" "my-private-RTs" {
+#   count = var.private_route_table_count
+#   vpc_id = aws_vpc.my-vpc.id
+#   route {
+#     cidr_block     = var.route_table_cidr_block
+#     # nat_gateway_id = aws_nat_gateway.nat-gateways[count.index].id
+#   }
+#   tags = {
+#     Name = "my-private-RT-${count.index}"
+#   }
+# }
 
 resource "aws_route_table" "my-public-RTs" {
   count = var.public_route_table_count
