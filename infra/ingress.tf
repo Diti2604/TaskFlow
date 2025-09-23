@@ -8,10 +8,12 @@ resource "kubernetes_ingress_v1" "fastapi" {
       "alb.ingress.kubernetes.io/listen-ports"   = "[{\"HTTP\":80},{\"HTTPS\":443}]"
       "alb.ingress.kubernetes.io/certificate-arn"= aws_acm_certificate.cert-base.arn
       "alb.ingress.kubernetes.io/target-type"    = "ip"
+      "alb.ingress.kubernetes.io/security-groups"  = aws_security_group.alb_from_vpclink_sg.id
+      
+      "alb.ingress.kubernetes.io/inbound-cidrs"    = var.vpc_cidr  
       "alb.ingress.kubernetes.io/tags"           = "app=fastapi,ingress-name=fastapi-ingress"
     }
-  }
-
+    }            
   spec {
     ingress_class_name = "alb"
     rule {
