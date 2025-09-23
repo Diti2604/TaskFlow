@@ -8,7 +8,7 @@ resource "aws_vpc" "my-vpc" {
   enable_dns_hostnames = true
   tags       = { Name = "my-vpc" }
 }
-
+       
 data "aws_availability_zones" "available" {
   state = var.availability_zone_state
   filter {
