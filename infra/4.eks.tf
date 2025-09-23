@@ -374,9 +374,13 @@ resource "aws_iam_policy" "eks-alb-policy" {
 }
 
 
+data "aws_eks_cluster" "this" {
+  name = var.cluster_name
+}
+
 resource "aws_security_group" "ec2_eks_access" {
   name        = "ec2-eks-access-sg"
-  description = "Allow EC2 instances to access EKS control plane"
+  description = "Allow EC2 to reach EKS control plane"
   vpc_id      = aws_vpc.my-vpc.id
 
   egress {
@@ -391,12 +395,12 @@ resource "aws_security_group" "ec2_eks_access" {
   }
 }
 
-resource "aws_security_group_rule" "eks_controlplane_ingress" {
+resource "aws_security_group_rule" "eks_controlplane_ingress_from_ec2sg" {
   type                     = "ingress"
+  protocol                 = "tcp"
   from_port                = 443
   to_port                  = 443
-  protocol                 = "tcp"
   source_security_group_id = aws_security_group.ec2_eks_access.id
-  security_group_id        = aws_eks_cluster.cluster1.vpc_config[0].cluster_security_group_id
-  description              = "Allow EC2 SG to talk to EKS API server"
+  security_group_id        = data.aws_eks_cluster.this.vpc_config[0].cluster_security_group_id
+  description              = "Allow EC2 SG to call EKS API server"
 }
