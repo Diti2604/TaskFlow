@@ -381,7 +381,7 @@ resource "aws_security_group_rule" "eks_controlplane_ingress" {
   to_port                  = 443
   protocol                 = "tcp"
   source_security_group_id = aws_security_group.ec2_eks_access.id
-  security_group_id        = aws_eks.cluster1.vpc_config[0].cluster_security_group_id
+  security_group_id        = aws_eks_cluster.cluster1.vpc_config[0].cluster_security_group_id
   description              = "Allow EC2 SG to talk to EKS API server"
 }
 
