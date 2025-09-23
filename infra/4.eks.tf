@@ -374,6 +374,17 @@ resource "aws_iam_policy" "eks-alb-policy" {
 }
 
 
+
+resource "aws_security_group_rule" "eks_controlplane_ingress" {
+  type                     = "ingress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.ec2_eks_access.id
+  security_group_id        = aws_eks.cluster1.vpc_config[0].cluster_security_group_id
+  description              = "Allow EC2 SG to talk to EKS API server"
+}
+
 data "aws_eks_cluster" "this" {
   name = var.cluster_name
 }
