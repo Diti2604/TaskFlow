@@ -379,6 +379,13 @@ resource "aws_security_group" "ec2_eks_access" {
   description = "Allow EC2 instances to access the EKS API (443)"
   vpc_id      = aws_vpc.my-vpc.id
 
+ingress {
+    description = "Allow SSH from your IP"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  # Replace with your actual IP CIDR
+  }
   # Typical wide egress so the instance can reach the internet/VPC
   egress {
     from_port   = 0
