@@ -373,7 +373,6 @@ resource "aws_iam_policy" "eks-alb-policy" {
   })
 }
 
-# EC2 SG that your instance(s) will use
 resource "aws_security_group" "ec2_eks_access" {
   name        = "ec2-eks-access-sg"
   description = "Allow EC2 instances to access the EKS API (443)"
@@ -384,9 +383,8 @@ ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # Replace with your actual IP CIDR
+    cidr_blocks = ["0.0.0.0/0"]  
   }
-  # Typical wide egress so the instance can reach the internet/VPC
   egress {
     from_port   = 0
     to_port     = 0
@@ -399,7 +397,6 @@ ingress {
   }
 }
 
-# Add an ingress rule *to the EKS cluster security group* from the EC2 SG on 443
 resource "aws_security_group_rule" "allow_ec2_into_eks_api" {
   type                     = "ingress"
   description              = "Allow EC2 SG to call EKS API server (443)"
@@ -407,10 +404,8 @@ resource "aws_security_group_rule" "allow_ec2_into_eks_api" {
   to_port                  = 443
   protocol                 = "tcp"
 
-  # Target = EKS Cluster Security Group
   security_group_id        = aws_eks_cluster.cluster1.vpc_config[0].cluster_security_group_id
 
-  # Source = the EC2 SG created above
   source_security_group_id = aws_security_group.ec2_eks_access.id
 
   depends_on = [
