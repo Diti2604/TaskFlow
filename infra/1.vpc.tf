@@ -56,15 +56,15 @@ resource "aws_eip" "elastic-ip-addresses" {
   ]
 }
 
-resource "aws_nat_gateway" "nat-gateways" {
-  count = var.nat_gateway_count
-  allocation_id = aws_eip.elastic-ip-addresses[count.index].id
-  subnet_id     = aws_subnet.public-subnets[count.index].id
+# resource "aws_nat_gateway" "nat-gateways" {
+#   count = var.nat_gateway_count
+#   allocation_id = aws_eip.elastic-ip-addresses[count.index].id
+#   subnet_id     = aws_subnet.public-subnets[count.index].id
 
-  tags = {
-    Name = "nat-gateway-${count.index}"
-  }
-}
+#   tags = {
+#     Name = "nat-gateway-${count.index}"
+#   }
+# }
 
 resource "aws_route_table" "my-private-RTs" {
   count = var.private_route_table_count
