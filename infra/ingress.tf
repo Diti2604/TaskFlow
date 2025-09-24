@@ -9,11 +9,6 @@ resource "kubernetes_ingress_v1" "fastapi" {
       "alb.ingress.kubernetes.io/certificate-arn"= aws_acm_certificate.cert-base.arn
       "alb.ingress.kubernetes.io/target-type"    = "ip" 
       "alb.ingress.kubernetes.io/healthcheck-path"= "/"
-      "alb.ingress.kubernetes.io/healthcheck-interval-seconds"   = "5"
-      "alb.ingress.kubernetes.io/healthcheck-timeout-seconds"    = "4"
-      "alb.ingress.kubernetes.io/healthy-threshold-count"        = "2"
-      "alb.ingress.kubernetes.io/unhealthy-threshold-count"      = "2"
-      "alb.ingress.kubernetes.io/target-group-attributes"        = "deregistration_delay.timeout_seconds=15,slow_start.duration_seconds=30"
       "alb.ingress.kubernetes.io/tags"           = "app=fastapi,ingress-name=fastapi-ingress"
     }
     }            
