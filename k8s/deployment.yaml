@@ -5,7 +5,7 @@ metadata:
   labels:
     app: fastapi
 spec:
-  replicas: 2
+  replicas: 3
   strategy:
     rollingUpdate:
       maxUnavailable: 0       
@@ -38,10 +38,6 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 1
             failureThreshold: 3
-          lifecycle:
-            preStop:
-              exec:
-                command: ["/bin/sh","-c","sleep 30"] 
           resources:
             requests:
               cpu: "100m"        
