@@ -39,17 +39,6 @@
       return alert;
     }
 
-    async function fetchWithRetry(url, opts, tries = 3, backoff = 250) {
-      let err;
-      for (let i = 0; i < tries; i++) {
-        try { return await fetch(url, opts); }
-        catch (e) { err = e; }
-        await new Promise(r => setTimeout(r, backoff));
-        backoff *= 2;
-      }
-      throw err;
-    }
-
     function hideAlert(alert) {
       alert.classList.add('fade-out');
       setTimeout(() => {
@@ -89,7 +78,7 @@
         submitBtn.classList.add('loading');
         submitBtn.textContent = '';
         try {
-          const response = await fetchWithRetry(`${apiUrl}${endpoint}`, {
+          const response = await fetch(`${apiUrl}${endpoint}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
