@@ -4,7 +4,7 @@ locals {
   ]
 }
 resource "aws_cloudfront_distribution" "s3_distribution" {
-#  aliases = local.cf_aliases
+ aliases = local.cf_aliases
  origin {
   domain_name = aws_s3_bucket_website_configuration.site.website_endpoint 
   origin_id   = local.s3_origin_id
@@ -34,11 +34,11 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     }
   }
   viewer_certificate {
-    cloudfront_default_certificate = true
-    # acm_certificate_arn            = aws_acm_certificate.cert-base.arn
-    minimum_protocol_version       = "TLSv1.2_2021"
+    acm_certificate_arn      = aws_acm_certificate.cert-base.arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
   }
-    # depends_on = [aws_acm_certificate_validation.name]
+    depends_on = [aws_acm_certificate_validation.name]
 }
 data "aws_cloudfront_cache_policy" "caching_disabled" {
   name = "Managed-CachingDisabled"
