@@ -6,7 +6,7 @@ resource "kubernetes_ingress_v1" "fastapi" {
       "kubernetes.io/ingress.class"              = "alb"
       "alb.ingress.kubernetes.io/scheme"         = "internal"
       "alb.ingress.kubernetes.io/listen-ports"   = "[{\"HTTP\":80},{\"HTTPS\":443}]"
-      "alb.ingress.kubernetes.io/certificate-arn"= aws_acm_certificate.cert-base.arn
+      # "alb.ingress.kubernetes.io/certificate-arn"= aws_acm_certificate.cert-base.arn
       "alb.ingress.kubernetes.io/target-type"    = "ip" 
       "alb.ingress.kubernetes.io/healthcheck-path"= "/"
       "alb.ingress.kubernetes.io/tags"           = "app=fastapi,ingress-name=fastapi-ingress"
@@ -73,7 +73,6 @@ resource "helm_release" "aws_lb_controller" {
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
   depends_on = [kubernetes_service_account.alb_controller, time_sleep.pre_alb_buffer]
-
   values = [yamlencode({
     clusterName = var.cluster_name
     region      = var.aws_region
