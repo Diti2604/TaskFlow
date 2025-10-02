@@ -1,10 +1,4 @@
-locals {
-  cf_aliases = [
-    "login.${var.account_id}.realhandsonlabs.net",
-  ]
-}
 resource "aws_cloudfront_distribution" "s3_distribution" {
- aliases = local.cf_aliases
  origin {
   domain_name = aws_s3_bucket_website_configuration.site.website_endpoint 
   origin_id   = local.s3_origin_id
