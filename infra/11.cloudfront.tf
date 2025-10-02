@@ -34,11 +34,10 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     }
   }
   viewer_certificate {
-    acm_certificate_arn      = aws_acm_certificate.cert-base.arn
+    acm_certificate_arn      = aws_acm_certificate.imported.arn
     ssl_support_method       = "sni-only"
     minimum_protocol_version = "TLSv1.2_2021"
   }
-    depends_on = [aws_acm_certificate_validation.name]
 }
 data "aws_cloudfront_cache_policy" "caching_disabled" {
   name = "Managed-CachingDisabled"
