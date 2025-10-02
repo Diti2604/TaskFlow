@@ -73,7 +73,6 @@ resource "helm_release" "aws_lb_controller" {
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
   depends_on = [kubernetes_service_account.alb_controller, time_sleep.pre_alb_buffer]
-
   values = [yamlencode({
     clusterName = var.cluster_name
     region      = var.aws_region
