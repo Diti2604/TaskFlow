@@ -12,9 +12,12 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = "~> 2.38"
     }
+    tls = { 
+    source = "hashicorp/tls", version = "~> 4.0" 
+    }
   }
   backend "s3" {
-     bucket = "my-s3-bucket-617632154226"
+     bucket = "my-s3-bucket-771743056978"
      key = "backend"
      region = "us-east-1"
   }
