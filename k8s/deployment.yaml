@@ -22,7 +22,7 @@ spec:
       terminationGracePeriodSeconds: 60
       containers:
         - name: fastapi
-          image: 771743056978.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:latest
+          image: 833660969227.dkr.ecr.us-east-1.amazonaws.com/fastapi-app:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
