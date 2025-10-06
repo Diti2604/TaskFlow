@@ -15,9 +15,12 @@ terraform {
     tls = { 
     source = "hashicorp/tls", version = "~> 4.0" 
     }
+    acme = { 
+    source = "vancluever/acme", version = ">= 2.18.0" 
+    }
   }
   backend "s3" {
-     bucket = "my-s3-bucket-373633008772"
+     bucket = "my-s3-bucket-905418288378"
      key = "backend"
      region = "us-east-1"
   }
@@ -26,4 +29,8 @@ terraform {
 provider "aws" {
   region = var.aws_region
   alias  = "us_east_1"
+}
+
+provider "acme" {
+  server_url = "https://acme-v02.api.letsencrypt.org/directory"
 }
