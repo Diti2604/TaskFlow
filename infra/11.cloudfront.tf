@@ -1,4 +1,5 @@
 resource "aws_cloudfront_distribution" "s3_distribution" {
+  aliases = ["login.${local.root_domain}"] 
  origin {
   domain_name = aws_s3_bucket_website_configuration.site.website_endpoint 
   origin_id   = local.s3_origin_id
