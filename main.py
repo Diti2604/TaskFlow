@@ -101,16 +101,16 @@ def _bootstrap_worker(max_minutes=15):
 
     _log("Bootstrap timed out; app will continue serving without it.")
 
-# @app.on_event("startup")
-# def startup():
-#     if not BOOTSTRAP_ON_START:
-#         _log("BOOTSTRAP_ON_START=false; skipping schema bootstrap.")
-#         return
-#     threading.Thread(target=_bootstrap_worker, daemon=True).start()
-    
 @app.on_event("startup")
-async def crash_on_start():
-    raise RuntimeError("Intentional startup failure")
+def startup():
+    if not BOOTSTRAP_ON_START:
+        _log("BOOTSTRAP_ON_START=false; skipping schema bootstrap.")
+        return
+    threading.Thread(target=_bootstrap_worker, daemon=True).start()
+    
+# @app.on_event("startup")
+# async def crash_on_start():
+#     raise RuntimeError("Intentional startup failure")
 
 
 def get_connection():
