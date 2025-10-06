@@ -8,16 +8,25 @@ locals {
   ]
 }
 
-resource "tls_private_key" "this" {
+# 1) ACME account key
+resource "tls_private_key" "acme_account" {
   algorithm = "RSA"
   rsa_bits  = 2048
 }
+
+# 2) Certificate key (this must match the cert you import to ACM)
+resource "tls_private_key" "cert_key" {
+  algorithm = "RSA"
+  rsa_bits  = 2048
+}
+
 resource "acme_registration" "this" {
-  account_key_pem = tls_private_key.this.private_key_pem
-  email_address   = "email@gmail.com"
+  account_key_pem         = tls_private_key.acme_account.private_key_pem
+  email_address           = "email@gmail.com"
 }
 resource "acme_certificate" "le" {
   account_key_pem           = acme_registration.this.account_key_pem
+  private_key_pem           = tls_private_key.cert_key.private_key_pem   # <<--- IMPORTANT
   common_name               = local.root_domain
   subject_alternative_names = local.names
 
@@ -27,9 +36,9 @@ resource "acme_certificate" "le" {
 }
 
 resource "aws_acm_certificate" "imported" {
-  private_key       = tls_private_key.this.private_key_pem
-  certificate_body  = acme_certificate.le.certificate_pem
-  certificate_chain = acme_certificate.le.issuer_pem
+  private_key       = tls_private_key.cert_key.private_key_pem            # <<--- matches above
+  certificate_body  = acme_certificate.le.certificate_pem                 # leaf only
+  certificate_chain = acme_certificate.le.issuer_pem                      # intermediates
 
   tags = {
     Project = "fastapi"
