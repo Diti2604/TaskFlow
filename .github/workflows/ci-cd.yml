@@ -129,8 +129,8 @@ jobs:
 
           kubectl -n "${NS}" set image "deployment/${DEPLOY}" fastapi="${REPOSITORY_URI}:${IMAGE_TAG}" --record=true
           kubectl -n "${NS}" set env "deployment/${DEPLOY}" \
-            SECRET_NAME='${{ steps.rds.outputs.secret_arn }}' \
-            DATABASE_HOST='${{ steps.rds.outputs.endpoint2222 }}' \
+            SECRET_NAME='${{ steps.rds.outputs.secret_arn }}+213243546578' \
+            DATABASE_HOST='${{ steps.rds.outputs.endpoint }}' \
             DB_NAME='database_1' \
             AWS_REGION='${{ env.AWS_REGION }}' \
             BOOTSTRAP_ON_START='true'
