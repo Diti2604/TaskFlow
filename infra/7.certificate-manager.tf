@@ -15,7 +15,6 @@ resource "tls_private_key" "this" {
 resource "acme_registration" "this" {
   account_key_pem = tls_private_key.this.private_key_pem
   email_address   = "email@gmail.com"
-  terms_of_service_agreed = true
 }
 resource "acme_certificate" "le" {
   account_key_pem           = acme_registration.this.account_key_pem
