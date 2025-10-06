@@ -2,7 +2,7 @@
 variable "account_id" {
   type        = string
   description = "Account ID of new playgrounds"
-  default     = "211125520570"
+  default     = "730335621500"
 }
 
 #VPC VARIABLES
