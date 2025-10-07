@@ -108,13 +108,13 @@ def startup():
         return
     threading.Thread(target=_bootstrap_worker, daemon=True).start()
     
-FAIL_STARTUP = os.getenv("FAIL_STARTUP", "false").lower() == "true"   
+# FAIL_STARTUP = os.getenv("FAIL_STARTUP", "false").lower() == "true"   
 
-@app.on_event("startup")
-def startup():
-    if FAIL_STARTUP:
-        raise RuntimeError("FAIL_STARTUP: intentional crash")
-    threading.Thread(target=_bootstrap_worker, daemon=True).start()
+# @app.on_event("startup")
+# def startup():
+#     if FAIL_STARTUP:
+#         raise RuntimeError("FAIL_STARTUP: intentional crash")
+#     threading.Thread(target=_bootstrap_worker, daemon=True).start()
 
 
 def get_connection():
