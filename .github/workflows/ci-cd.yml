@@ -203,7 +203,11 @@ jobs:
         env:
           S3_BUCKET_NAME: my-tf-bucket-${var.account_id}-for-static-website-hosting
 
-
+      - name: Verify script.js exists in S3
+        run: |
+          BUCKET="my-tf-bucket-${{ env.ACCOUNT_ID }}-for-static-website-hosting"
+          echo "Checking if script.js exists in $BUCKET..."
+          aws s3api head-object --bucket "$BUCKET" --key "script.js"
       - name:  Roll back website to previous versions 
         if: ${{ env.ENABLE_S3_ROLLBACK == 'true' && failure() }}
         run: |
