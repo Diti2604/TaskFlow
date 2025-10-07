@@ -183,63 +183,13 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-
       - name: Getting Account ID
         id: build
         run: |
-          set -e
-          echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
-
-      - name: Capture object versions before deployment
-        if: ${{ env.ENABLE_S3_ROLLBACK == 'true' }}
-        run: |
-          BUCKET="my-tf-bucket-${{ env.ACCOUNT_ID }}-for-static-website-hosting"
-          aws s3api list-object-versions --bucket "$BUCKET" --output json > pre_versions.json || echo '{}' > pre_versions.json
+            set -e
+            echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
 
       - name: Sync files to S3
         run: aws s3 sync frontend/my-react-app s3://my-tf-bucket-${{ env.ACCOUNT_ID }}-for-static-website-hosting --delete --exclude "node_modules/*" --exclude "package*.json" --exclude ".git/*" --exclude "public/*" --exclude "src/*"
         env:
-          S3_BUCKET_NAME: my-tf-bucket-${var.account_id}-for-static-website-hosting
-
-      - name: Verify script.js exists in S3
-        run: |
-          BUCKET="my-tf-bucket-${{ env.ACCOUNT_ID }}-for-static-website-hosting"
-          echo "Checking if script.js exists in $BUCKET..."
-          aws s3api head-object --bucket "$BUCKET" --key "script.js"
-      - name:  Roll back website to previous versions 
-        if: ${{ env.ENABLE_S3_ROLLBACK == 'true' && failure() }}
-        run: |
-          BUCKET="my-tf-bucket-${{ env.ACCOUNT_ID }}-for-static-website-hosting"
-          echo "Rolling back S3 objects using pre_versions.json…"
-          python3 - << 'PY'
-          import json, subprocess, os, sys
-          bucket = "my-tf-bucket-{}-for-static-website-hosting".format(os.environ.get("ACCOUNT_ID",""))
-          try:
-              with open('pre_versions.json') as f:
-                  data = json.load(f)
-          except Exception as e:
-              print("No snapshot available:", e)
-              sys.exit(0)
-
-          by_key = {}
-          for v in data.get('Versions', []):
-              key = v.get('Key')
-              if not key: 
-                  continue
-              by_key.setdefault(key, []).append(v)
-
-          for key, versions in by_key.items():
-              versions.sort(key=lambda x: x.get('LastModified',''), reverse=True)
-              ver = versions[0]
-              src = f"{bucket}/{key}?versionId={ver['VersionId']}"
-              print("Restoring", key, "->", ver['VersionId'])
-              subprocess.run([
-                  'aws','s3api','copy-object',
-                  '--bucket', bucket,
-                  '--key', key,
-                  '--copy-source', src
-              ], check=True)
-          PY
-          if [ -n "${{ env.CLOUDFRONT_ID }}" ]; then
-            aws cloudfront create-invalidation --distribution-id "${{ env.CLOUDFRONT_ID }}" --paths "/*" || true
-          fi
+          S3_BUCKET_NAME: my-tf-bucket-${{ env.ACCOUNT_ID }}-for-static-website-hosting
