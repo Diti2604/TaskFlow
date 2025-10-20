@@ -2,7 +2,9 @@
 variable "account_id" {
   type        = string
   description = "Account ID of new playgrounds"
+
   default     = "083880123527"
+
 }
 
 #VPC VARIABLES
@@ -153,4 +155,10 @@ variable "tags" {
   description = "Common tags to apply"
   type        = map(string)
   default     = {}
+}
+
+variable "contact_email" {
+  description = "Email address to contact for issues"
+  type        = string
+  default     = "joe@doe.com"
 }

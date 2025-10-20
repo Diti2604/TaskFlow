@@ -1,4 +1,5 @@
 resource "aws_cloudfront_distribution" "s3_distribution" {
+  aliases = ["login.${local.root_domain}"] 
  origin {
   domain_name = aws_s3_bucket_website_configuration.site.website_endpoint 
   origin_id   = local.s3_origin_id
@@ -27,9 +28,11 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
       locations        = ["US", "CA", "GB", "DE", "AL", "AT"]
     }
   }
-  viewer_certificate {
-    cloudfront_default_certificate = true
-  }
+viewer_certificate {
+  acm_certificate_arn      = aws_acm_certificate.imported.arn
+  ssl_support_method       = "sni-only"
+  minimum_protocol_version = "TLSv1.2_2021"
+}
 }
 data "aws_cloudfront_cache_policy" "caching_disabled" {
   name = "Managed-CachingDisabled"
