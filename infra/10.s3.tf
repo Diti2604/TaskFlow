@@ -1,50 +1,42 @@
-resource "aws_s3_bucket" "s3_bucket" {
-  bucket = "my-tf-bucket-${var.account_id}-for-static-website-hosting"
-
-  tags = {
-    Name = "My-bucket"
-  }
-}
-
-
-resource "aws_s3_bucket_website_configuration" "site" {
-  bucket = aws_s3_bucket.s3_bucket.id
-  index_document { suffix = "index.html" }
-  error_document { key    = "error.html" }
-}
-
-
-resource "aws_s3_bucket_ownership_controls" "enable_acls" {
-  bucket = aws_s3_bucket.s3_bucket.id
-  rule {
-    object_ownership = "BucketOwnerPreferred" 
-  }
+resource "aws_s3_bucket" "site" {
+  bucket = "taskflow-s3-bucket-0129348910"
 }
 
 resource "aws_s3_bucket_public_access_block" "site" {
-  bucket                  = aws_s3_bucket.s3_bucket.id
-  block_public_acls       = false
-  ignore_public_acls      = false
-  block_public_policy     = false
-  restrict_public_buckets = false
+  bucket = aws_s3_bucket.site.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
-locals { s3_origin_id = "myS3Origin" }
-
-data "aws_iam_policy_document" "public_read" {
-  statement {
-    sid = "PublicReadGetObject"
-    principals { 
-    type = "AWS" 
-    identifiers = ["*"] 
-    }
-    actions   = ["s3:GetObject"]
-    resources = ["${aws_s3_bucket.s3_bucket.arn}/*"]
-  }
+resource "aws_s3_bucket_policy" "site" {
+  bucket = aws_s3_bucket.site.id
+  
+  depends_on = [aws_cloudfront_distribution.s3_distribution]
+  
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowCloudFrontServicePrincipal"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudfront.amazonaws.com"
+        }
+        Action   = "s3:GetObject"
+        Resource = "${aws_s3_bucket.site.arn}/*"
+        Condition = {
+          StringEquals = {
+            "AWS:SourceArn" = aws_cloudfront_distribution.s3_distribution.arn
+          }
+        }
+      }
+    ]
+  })
 }
 
-resource "aws_s3_bucket_policy" "site_public" {
-  bucket     = aws_s3_bucket.s3_bucket.id
-  policy     = data.aws_iam_policy_document.public_read.json
-  depends_on = [aws_s3_bucket_public_access_block.site]
-}   
+locals {
+  s3_origin_id = "myS3Origin"
+}

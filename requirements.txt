@@ -3,3 +3,5 @@ fastapi
 pymysql
 boto3
 dotenv
+passlib[bcrypt]
+python-jose[cryptography]
