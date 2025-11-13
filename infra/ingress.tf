@@ -1,3 +1,6 @@
+# Internet-facing ALB for FastAPI backend
+# ALB must be in PUBLIC subnets to receive traffic from the internet
+# Nodes are in PRIVATE subnets for security (ALB routes to pods via private IPs)
 resource "kubernetes_ingress_v1" "fastapi" {
   metadata {
     name      = "fastapi-ingress"
@@ -5,9 +8,10 @@ resource "kubernetes_ingress_v1" "fastapi" {
     annotations = {
       "kubernetes.io/ingress.class"              = "alb"
       "alb.ingress.kubernetes.io/scheme"         = "internet-facing"
+      "alb.ingress.kubernetes.io/subnets"        = join(",", aws_subnet.public-subnets[*].id)  # MUST be public subnets for internet access
       "alb.ingress.kubernetes.io/listen-ports"   = "[{\"HTTP\":80},{\"HTTPS\":443}]"
-      "alb.ingress.kubernetes.io/certificate-arn"= aws_acm_certificate_validation.cert.certificate_arn
-      "alb.ingress.kubernetes.io/target-type"    = "ip" 
+      "alb.ingress.kubernetes.io/certificate-arn"= aws_acm_certificate_validation.cert.certificate_arn  # Validated ACM certificate
+      "alb.ingress.kubernetes.io/target-type"    = "ip"  # Route directly to pod IPs (not node ports)
       "alb.ingress.kubernetes.io/healthcheck-path"= "/"
       "alb.ingress.kubernetes.io/tags"           = "app=fastapi,ingress-name=fastapi-ingress"
     }

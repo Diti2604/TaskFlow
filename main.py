@@ -1,13 +1,17 @@
-import os, time, json, threading, math, pymysql, boto3
-from fastapi import FastAPI, HTTPException
+import os, time, json, threading, pymysql, boto3
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional, List
+from datetime import date
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = FastAPI()
+
+# CORS - Allow all origins for simplicity (restrict in production)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],    
@@ -22,9 +26,31 @@ AWS_REGION    = os.getenv("AWS_REGION", "us-east-1")
 DB_NAME       = os.getenv("DB_NAME", "database_1")
 BOOTSTRAP_ON_START = os.getenv("BOOTSTRAP_ON_START", "true").lower() == "true"
 
-class User(BaseModel):
+# Pydantic models
+class UserLogin(BaseModel):
     name: str
     password: str
+
+class UserCreate(BaseModel):
+    name: str
+    password: str
+    email: Optional[str] = None
+
+class ProjectCreate(BaseModel):
+    name: str
+    description: Optional[str] = ""
+
+class TaskCreate(BaseModel):
+    title: str
+    description: Optional[str] = ""
+    due_date: Optional[str] = None
+    assignee_id: Optional[int] = None
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    status: Optional[str] = None
+    description: Optional[str] = None
+    due_date: Optional[str] = None
 
 def _log(msg): 
     print(f"[bootstrap] {msg}", flush=True)
@@ -62,19 +88,49 @@ def _ensure_db_and_table():
         try: conn.close()
         except Exception: pass
 
-
     conn_db = connect_mysql(DATABASE_HOST, user, password, database=DB_NAME)
     try:
         conn_db.ping(reconnect=True)
         with conn_db.cursor() as cur:
+            # Users table
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     id INT AUTO_INCREMENT PRIMARY KEY,
-                    name VARCHAR(255) NOT NULL,
-                    password VARCHAR(255) NOT NULL
+                    name VARCHAR(255) NOT NULL UNIQUE,
+                    password VARCHAR(255) NOT NULL,
+                    email VARCHAR(255),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             """)
-        _log("Table users ensured.")
+            
+            # Projects table
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS projects (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    user_id INT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """)
+            
+            # Tasks table
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS tasks (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    project_id INT NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    status VARCHAR(50) DEFAULT 'todo',
+                    due_date DATE,
+                    assignee_id INT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+                    FOREIGN KEY (assignee_id) REFERENCES users(id) ON DELETE SET NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """)
+        _log("All tables ensured.")
     finally:
         try: conn_db.close()
         except Exception: pass
@@ -131,29 +187,36 @@ def get_connection():
 
 @app.get("/")
 def root():
-    return {"message": "Hello from FastAPI on EC2!!"}   # was a set literal
+    return {"message": "Hello from FastAPI on EC2!!", "status": "healthy"}
 
-@app.post("/users")
-def create_user(user: User):
+# ============= AUTH ENDPOINTS =============
+@app.post("/signup")
+def signup(user: UserCreate):
     conn = get_connection()
     try:
         with conn.cursor() as cur:
+            # Check if user already exists
+            cur.execute("SELECT id FROM users WHERE name=%s", (user.name,))
+            if cur.fetchone():
+                raise HTTPException(status_code=400, detail="User already exists")
+            
             cur.execute(
-                "INSERT INTO users (name, password) VALUES (%s, %s)",
-                (user.name, user.password),
+                "INSERT INTO users (name, password, email) VALUES (%s, %s, %s)",
+                (user.name, user.password, user.email),
             )
+            user_id = cur.lastrowid
     finally:
         try: conn.close()
         except Exception: pass
-    return {"message": "User created"}
+    return {"message": "User created", "user": {"id": user_id, "name": user.name}}
 
 @app.post("/login")
-def login(user: User):
+def login(user: UserLogin):
     conn = get_connection()
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT * FROM users WHERE name=%s AND password=%s",
+                "SELECT id, name, email FROM users WHERE name=%s AND password=%s",
                 (user.name, user.password),
             )
             row = cur.fetchone()
@@ -162,4 +225,158 @@ def login(user: User):
         except Exception: pass
     if not row:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    return {"message": f"Welcome, {user.name}!"}
+    return {"message": f"Welcome, {user.name}!", "user": row}
+
+# ============= PROJECT ENDPOINTS =============
+@app.get("/api/projects")
+def get_projects():
+    """Get all projects with their tasks"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, name, description, created_at FROM projects ORDER BY created_at DESC")
+            projects = cur.fetchall()
+            
+            for project in projects:
+                cur.execute(
+                    "SELECT id, title, description, status, due_date, assignee_id FROM tasks WHERE project_id=%s ORDER BY created_at",
+                    (project['id'],)
+                )
+                project['tasks'] = cur.fetchall()
+    finally:
+        try: conn.close()
+        except Exception: pass
+    return projects
+
+@app.post("/api/projects")
+def create_project(project: ProjectCreate):
+    """Create a new project"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO projects (name, description) VALUES (%s, %s)",
+                (project.name, project.description),
+            )
+            project_id = cur.lastrowid
+    finally:
+        try: conn.close()
+        except Exception: pass
+    return {"id": project_id, "name": project.name, "description": project.description, "tasks": []}
+
+@app.get("/api/projects/{project_id}")
+def get_project(project_id: int):
+    """Get a specific project with tasks"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, name, description, created_at FROM projects WHERE id=%s", (project_id,))
+            project = cur.fetchone()
+            if not project:
+                raise HTTPException(status_code=404, detail="Project not found")
+            
+            cur.execute(
+                "SELECT id, title, description, status, due_date, assignee_id FROM tasks WHERE project_id=%s ORDER BY created_at",
+                (project_id,)
+            )
+            project['tasks'] = cur.fetchall()
+    finally:
+        try: conn.close()
+        except Exception: pass
+    return project
+
+# ============= TASK ENDPOINTS =============
+@app.post("/api/projects/{project_id}/tasks")
+def create_task(project_id: int, task: TaskCreate):
+    """Create a new task in a project"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO tasks (project_id, title, description, due_date, assignee_id) VALUES (%s, %s, %s, %s, %s)",
+                (project_id, task.title, task.description, task.due_date, task.assignee_id),
+            )
+            task_id = cur.lastrowid
+    finally:
+        try: conn.close()
+        except Exception: pass
+    return {"id": task_id, "title": task.title, "status": "todo", "project_id": project_id}
+
+@app.patch("/api/tasks/{task_id}")
+def update_task(task_id: int, task: TaskUpdate):
+    """Update a task"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            # Build dynamic update query
+            updates = []
+            params = []
+            if task.title is not None:
+                updates.append("title=%s")
+                params.append(task.title)
+            if task.status is not None:
+                updates.append("status=%s")
+                params.append(task.status)
+            if task.description is not None:
+                updates.append("description=%s")
+                params.append(task.description)
+            if task.due_date is not None:
+                updates.append("due_date=%s")
+                params.append(task.due_date)
+            
+            if not updates:
+                raise HTTPException(status_code=400, detail="No fields to update")
+            
+            params.append(task_id)
+            cur.execute(f"UPDATE tasks SET {', '.join(updates)} WHERE id=%s", params)
+            
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Task not found")
+            
+            # Get updated task
+            cur.execute("SELECT id, title, description, status, due_date, project_id FROM tasks WHERE id=%s", (task_id,))
+            updated = cur.fetchone()
+    finally:
+        try: conn.close()
+        except Exception: pass
+    return updated
+
+@app.delete("/api/tasks/{task_id}")
+def delete_task(task_id: int):
+    """Delete a task"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM tasks WHERE id=%s", (task_id,))
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Task not found")
+    finally:
+        try: conn.close()
+        except Exception: pass
+    return {"message": "Task deleted"}
+
+# ============= ANALYTICS ENDPOINTS =============
+@app.get("/api/analytics")
+def get_analytics():
+    """Get task analytics"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT status, COUNT(*) as count 
+                FROM tasks 
+                GROUP BY status
+            """)
+            rows = cur.fetchall()
+            
+            task_status_counts = {
+                'todo': 0,
+                'in_progress': 0,
+                'done': 0
+            }
+            for row in rows:
+                task_status_counts[row['status']] = row['count']
+    finally:
+        try: conn.close()
+        except Exception: pass
+    return {"task_status_counts": task_status_counts}
