@@ -38,6 +38,19 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
         run: terraform init -upgrade
 
+      - name: Import existing CloudFront OAC if needed
+        working-directory: ${{ env.TF_DIR }}
+        continue-on-error: true
+        run: |
+          # Check if OAC exists in AWS but not in state
+          OAC_ID=$(aws cloudfront list-origin-access-controls --query "OriginAccessControlList.Items[?Name=='my-oac'].Id" --output text)
+          if [ ! -z "$OAC_ID" ]; then
+            echo "Found existing OAC: $OAC_ID"
+            terraform import aws_cloudfront_origin_access_control.default-oac "$OAC_ID" || echo "Already in state or import failed"
+          else
+            echo "No existing OAC found, will create new one"
+          fi
+
       - name: Terraform Validate
         working-directory: ${{ env.TF_DIR }}
         run: terraform validate
@@ -61,6 +74,14 @@ jobs:
         if: ${{ github.event_name == 'push' && steps.plan.outputs.exit_code == '2' }}
         working-directory: ${{ env.TF_DIR }}
         run: terraform apply -auto-approve tfplan
+
+      - name: Debug Helm releases on failure
+        if: failure()
+        run: |
+          echo "=== Checking Helm releases ==="
+          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER }} || echo "Could not update kubeconfig"
+          helm list -A || echo "Could not list helm releases"
+          kubectl get pods -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller || echo "Could not get controller pods"
 
   deploy-to-eks:
     runs-on: ubuntu-latest
