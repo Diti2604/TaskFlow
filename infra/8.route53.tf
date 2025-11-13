@@ -49,7 +49,6 @@ data "aws_lb" "fastapi_alb" {
   }
 }
 
-# Create a Route53 alias record for the API that points to the ALB
 resource "aws_route53_record" "api" {
   zone_id = data.aws_route53_zone.main.zone_id
   name    = "api.taskflow.indritcloud.com"

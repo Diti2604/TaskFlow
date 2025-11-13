@@ -40,3 +40,6 @@ output "private_subnet_ids" {
   value       = aws_subnet.private-subnets[*].id
 }
 
+output "cloudfront_distribution_id" {
+  value = aws_cloudfront_distribution.site_distribution.id
+}
