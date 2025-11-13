@@ -33,11 +33,6 @@ resource "aws_iam_role_policy_attachment" "amazon_ec2_container_registry_read_on
   role       = aws_iam_role.nodes.name
 }
 
-resource "aws_iam_role_policy_attachment" "worker_nodes_alb_attach" {
-  role       = aws_iam_role.nodes.name
-  policy_arn = aws_iam_policy.eks-alb-policy.arn
-}
-
 
 resource "aws_eks_node_group" "node_group_resource" {
   cluster_name    = aws_eks_cluster.cluster1.name
@@ -46,7 +41,7 @@ resource "aws_eks_node_group" "node_group_resource" {
   subnet_ids      = slice(aws_subnet.private-subnets[*].id, 0, var.private_subnets_count)
 
   capacity_type  = "SPOT"
-  instance_types = ["t2.micro"]
+  instance_types = ["t3.small"]
 
   scaling_config {
     desired_size = 2
