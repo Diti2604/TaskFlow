@@ -2,12 +2,59 @@ import React, { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useProject, useAddTask, useUpdateTask, useDeleteTask, useUpdateProject } from '../lib/hooks/useProject'
 
+function TasksContainer({ projectId }) {
+  const { data: project, isLoading: tasksLoading } = useProject(projectId)
+  const updateTask = useUpdateTask()
+  const deleteTask = useDeleteTask()
+
+  if (tasksLoading) {
+    return <div className="card" style={{ padding: 24 }}><div className="loading">Loading tasks...</div></div>
+  }
+
+  return (
+    <div className="card" style={{ padding: 24 }}>
+      <h2 style={{ marginTop: 0, marginBottom: 16 }}>Tasks</h2>
+      <div className="tasks-list">
+        {project?.tasks?.length ? (
+          project.tasks.map((t) => (
+            <div key={t.id} className="task">
+              <div>
+                <div className="task-title">{t.title}</div>
+                <div className="task-meta">{t.status}</div>
+              </div>
+              <div>
+                <button 
+                  className="btn" 
+                  onClick={() => updateTask.mutate({ 
+                    id: t.id, 
+                    payload: { status: t.status === 'todo' ? 'in_progress' : 'done' }, 
+                    projectId: parseInt(projectId) 
+                  })}
+                >
+                  Advance
+                </button>
+                <button 
+                  style={{ marginLeft: 8 }} 
+                  className="btn" 
+                  onClick={() => deleteTask.mutate({ id: t.id, projectId: parseInt(projectId) })}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="task-meta">No tasks yet.</div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function ProjectPage() {
   const { id } = useParams()
   const { data: project, isLoading } = useProject(id)
   const addTask = useAddTask(id)
-  const updateTask = useUpdateTask()
-  const deleteTask = useDeleteTask()
   const updateProject = useUpdateProject(id)
 
   const [title, setTitle] = useState('')
@@ -67,30 +114,23 @@ export default function ProjectPage() {
       </div>
       {!isEditingName && <p className="card-desc">{project.description}</p>}
 
-      <section>
-        <h2 style={{ marginTop: 18 }}>Tasks</h2>
-        <div className="tasks-list">
-          {project.tasks?.length ? (
-            project.tasks.map((t) => (
-              <div key={t.id} className="task">
-                <div>
-                  <div className="task-title">{t.title}</div>
-                  <div className="task-meta">{t.status}</div>
-                </div>
-                <div>
-                  <button className="btn" onClick={() => updateTask.mutate({ id: t.id, payload: { status: t.status === 'todo' ? 'in_progress' : 'done' }, projectId: parseInt(id) })}>Advance</button>
-                  <button style={{ marginLeft: 8 }} className="btn" onClick={() => deleteTask.mutate({ id: t.id, projectId: parseInt(id) })}>Delete</button>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="task-meta">No tasks yet.</div>
-          )}
-        </div>
+      <section style={{ marginTop: 24 }}>
+        <TasksContainer projectId={id} />
 
-        <div style={{ marginTop: 12 }}>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} className="input" placeholder="New task title" />
-          <button className="btn btn-primary" style={{ marginLeft: 8 }} onClick={onAdd}>Add Task</button>
+        <div style={{ marginTop: 16 }}>
+          <input 
+            value={title} 
+            onChange={(e) => setTitle(e.target.value)} 
+            className="input" 
+            placeholder="New task title" 
+          />
+          <button 
+            className="btn btn-primary" 
+            style={{ marginLeft: 8 }} 
+            onClick={onAdd}
+          >
+            Add Task
+          </button>
         </div>
       </section>
     </div>

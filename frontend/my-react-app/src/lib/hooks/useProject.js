@@ -36,9 +36,10 @@ export function useUpdateTask() {
     onSuccess: (data, variables) => {
       const projectId = variables?.projectId || data?.project_id
       
-      // Refetch immediately with no cache
+      // Refetch immediately with no cache - handle both string and number projectId
       if (projectId) {
-        qc.refetchQueries({ queryKey: ['project', projectId] })
+        qc.refetchQueries({ queryKey: ['project', String(projectId)] })
+        qc.refetchQueries({ queryKey: ['project', Number(projectId)] })
       }
       qc.refetchQueries({ queryKey: ['projects'] })
       qc.refetchQueries({ queryKey: ['analytics'] })
@@ -54,9 +55,10 @@ export function useDeleteTask() {
       return { ...res.data, projectId }
     },
     onSuccess: (data) => {
-      // Refetch immediately with no cache
+      // Refetch immediately with no cache - handle both string and number projectId
       if (data?.projectId) {
-        qc.refetchQueries({ queryKey: ['project', data.projectId] })
+        qc.refetchQueries({ queryKey: ['project', String(data.projectId)] })
+        qc.refetchQueries({ queryKey: ['project', Number(data.projectId)] })
       }
       qc.refetchQueries({ queryKey: ['projects'] })
       qc.refetchQueries({ queryKey: ['analytics'] })
