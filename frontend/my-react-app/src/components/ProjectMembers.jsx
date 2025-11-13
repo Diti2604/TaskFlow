@@ -8,7 +8,10 @@ export default function ProjectMembers({ project, isOwner, onMemberChange }) {
   const [error, setError] = useState('')
 
   const handleSearch = async () => {
-    if (!searchQuery.trim()) return
+    if (!searchQuery.trim()) {
+      setSearchResults([])
+      return
+    }
     
     setLoading(true)
     setError('')
@@ -17,20 +20,22 @@ export default function ProjectMembers({ project, isOwner, onMemberChange }) {
       setSearchResults(res.data)
     } catch (err) {
       setError('Failed to search users')
+      setSearchResults([])
     } finally {
       setLoading(false)
     }
   }
 
-  const handleAddMember = async (username) => {
+  const handleInviteMember = async (username) => {
     setError('')
     try {
       await api.post(`/api/projects/${project.id}/members`, { username })
       setSearchQuery('')
       setSearchResults([])
+      alert(`Invitation sent to ${username}!`)
       onMemberChange() // Refresh project data
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to add member')
+      setError(err.response?.data?.detail || 'Failed to send invitation')
     }
   }
 
@@ -99,6 +104,12 @@ export default function ProjectMembers({ project, isOwner, onMemberChange }) {
           </div>
 
           {/* Search Results */}
+          {searchQuery && !loading && searchResults.length === 0 && (
+            <div style={{ marginTop: 8, padding: 8, background: 'var(--bg)', borderRadius: 4, color: 'var(--muted)', fontSize: 14 }}>
+              No users found with username "{searchQuery}"
+            </div>
+          )}
+          
           {searchResults.length > 0 && (
             <div style={{ marginTop: 8 }}>
               <div style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 8 }}>Search results:</div>
@@ -106,8 +117,8 @@ export default function ProjectMembers({ project, isOwner, onMemberChange }) {
                 {searchResults.map((user) => (
                   <div key={user.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 8, background: 'var(--bg)', borderRadius: 4 }}>
                     <span>{user.name}</span>
-                    <button className="btn" onClick={() => handleAddMember(user.name)}>
-                      Add
+                    <button className="btn btn-primary" onClick={() => handleInviteMember(user.name)}>
+                      Invite
                     </button>
                   </div>
                 ))}

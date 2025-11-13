@@ -151,6 +151,22 @@ def _ensure_db_and_table():
                     UNIQUE KEY unique_member (project_id, user_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             """)
+            
+            # Project Invitations table
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS project_invitations (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    project_id INT NOT NULL,
+                    user_id INT NOT NULL,
+                    invited_by INT NOT NULL,
+                    status VARCHAR(20) DEFAULT 'pending',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE CASCADE,
+                    UNIQUE KEY unique_invitation (project_id, user_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """)
         _log("All tables ensured.")
     finally:
         try: conn_db.close()
@@ -394,8 +410,8 @@ def search_users(query: str, user_id: int):
     return users
 
 @app.post("/api/projects/{project_id}/members")
-def add_project_member(project_id: int, member: ProjectMemberAdd, user_id: int):
-    """Add a member to a project (only owner can add members)"""
+def invite_project_member(project_id: int, member: ProjectMemberAdd, user_id: int):
+    """Send an invitation to a user to join a project (only owner can invite)"""
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id is required")
     
@@ -403,10 +419,10 @@ def add_project_member(project_id: int, member: ProjectMemberAdd, user_id: int):
     try:
         with conn.cursor() as cur:
             # Verify current user is the owner
-            cur.execute("SELECT user_id FROM projects WHERE id=%s", (project_id,))
+            cur.execute("SELECT user_id, name FROM projects WHERE id=%s", (project_id,))
             project = cur.fetchone()
             if not project or project['user_id'] != user_id:
-                raise HTTPException(status_code=403, detail="Only project owner can add members")
+                raise HTTPException(status_code=403, detail="Only project owner can invite members")
             
             # Find user by username
             cur.execute("SELECT id FROM users WHERE name=%s", (member.username,))
@@ -416,9 +432,9 @@ def add_project_member(project_id: int, member: ProjectMemberAdd, user_id: int):
             
             target_user_id = target_user['id']
             
-            # Check if already owner
+            # Check if trying to invite self
             if target_user_id == user_id:
-                raise HTTPException(status_code=400, detail="Cannot add yourself as member")
+                raise HTTPException(status_code=400, detail="Cannot invite yourself")
             
             # Check if already a member
             cur.execute(
@@ -428,15 +444,31 @@ def add_project_member(project_id: int, member: ProjectMemberAdd, user_id: int):
             if cur.fetchone():
                 raise HTTPException(status_code=400, detail="User is already a member")
             
-            # Add member
+            # Check if invitation already exists
             cur.execute(
-                "INSERT INTO project_members (project_id, user_id, role) VALUES (%s, %s, 'member')",
+                "SELECT id, status FROM project_invitations WHERE project_id=%s AND user_id=%s",
                 (project_id, target_user_id)
+            )
+            existing = cur.fetchone()
+            if existing:
+                if existing['status'] == 'pending':
+                    raise HTTPException(status_code=400, detail="Invitation already sent")
+                else:
+                    # Delete old declined/accepted invitation
+                    cur.execute(
+                        "DELETE FROM project_invitations WHERE project_id=%s AND user_id=%s",
+                        (project_id, target_user_id)
+                    )
+            
+            # Create invitation
+            cur.execute(
+                "INSERT INTO project_invitations (project_id, user_id, invited_by, status) VALUES (%s, %s, %s, 'pending')",
+                (project_id, target_user_id, user_id)
             )
     finally:
         try: conn.close()
         except Exception: pass
-    return {"message": f"User {member.username} added to project"}
+    return {"message": f"Invitation sent to {member.username}"}
 
 @app.delete("/api/projects/{project_id}/members/{member_user_id}")
 def remove_project_member(project_id: int, member_user_id: int, user_id: int):
@@ -464,6 +496,99 @@ def remove_project_member(project_id: int, member_user_id: int, user_id: int):
         try: conn.close()
         except Exception: pass
     return {"message": "Member removed"}
+
+@app.get("/api/invitations")
+def get_user_invitations(user_id: int):
+    """Get all pending invitations for the current user"""
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+    
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT pi.id, pi.project_id, pi.created_at,
+                       p.name as project_name, p.description as project_description,
+                       u.name as invited_by_name
+                FROM project_invitations pi
+                JOIN projects p ON pi.project_id = p.id
+                JOIN users u ON pi.invited_by = u.id
+                WHERE pi.user_id = %s AND pi.status = 'pending'
+                ORDER BY pi.created_at DESC
+            """, (user_id,))
+            invitations = cur.fetchall()
+    finally:
+        try: conn.close()
+        except Exception: pass
+    return invitations
+
+@app.post("/api/invitations/{invitation_id}/accept")
+def accept_invitation(invitation_id: int, user_id: int):
+    """Accept a project invitation"""
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+    
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            # Get invitation
+            cur.execute(
+                "SELECT project_id, user_id FROM project_invitations WHERE id=%s AND status='pending'",
+                (invitation_id,)
+            )
+            invitation = cur.fetchone()
+            if not invitation:
+                raise HTTPException(status_code=404, detail="Invitation not found")
+            
+            if invitation['user_id'] != user_id:
+                raise HTTPException(status_code=403, detail="This invitation is not for you")
+            
+            # Add user as member
+            cur.execute(
+                "INSERT INTO project_members (project_id, user_id, role) VALUES (%s, %s, 'member')",
+                (invitation['project_id'], user_id)
+            )
+            
+            # Update invitation status
+            cur.execute(
+                "UPDATE project_invitations SET status='accepted' WHERE id=%s",
+                (invitation_id,)
+            )
+    finally:
+        try: conn.close()
+        except Exception: pass
+    return {"message": "Invitation accepted"}
+
+@app.post("/api/invitations/{invitation_id}/decline")
+def decline_invitation(invitation_id: int, user_id: int):
+    """Decline a project invitation"""
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+    
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            # Get invitation
+            cur.execute(
+                "SELECT user_id FROM project_invitations WHERE id=%s AND status='pending'",
+                (invitation_id,)
+            )
+            invitation = cur.fetchone()
+            if not invitation:
+                raise HTTPException(status_code=404, detail="Invitation not found")
+            
+            if invitation['user_id'] != user_id:
+                raise HTTPException(status_code=403, detail="This invitation is not for you")
+            
+            # Update invitation status
+            cur.execute(
+                "UPDATE project_invitations SET status='declined' WHERE id=%s",
+                (invitation_id,)
+            )
+    finally:
+        try: conn.close()
+        except Exception: pass
+    return {"message": "Invitation declined"}
 
 # ============= TASK ENDPOINTS =============
 @app.post("/api/projects/{project_id}/tasks")
