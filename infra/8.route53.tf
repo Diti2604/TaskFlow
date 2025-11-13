@@ -34,30 +34,34 @@ resource "aws_route53_record" "cloudmeter" {
   }
 }
 
-resource "time_sleep" "wait_for_alb" {
-  depends_on = [kubernetes_ingress_v1.fastapi, helm_release.aws_lb_controller]
-  create_duration = "300s"
-}
+# TEMPORARILY COMMENTED OUT: The ALB is created asynchronously by the AWS Load Balancer Controller.
+# Even with a 5-minute wait, it may not be ready. Uncomment after cluster is fully up, or use external-dns.
+# resource "time_sleep" "wait_for_alb" {
+#   depends_on = [kubernetes_ingress_v1.fastapi, helm_release.aws_lb_controller]
+#   create_duration = "300s"
+# }
+#
+# data "aws_lb" "fastapi_alb" {
+#   depends_on = [time_sleep.wait_for_alb]
+#   tags = { ingress-name = "fastapi-ingress" }
+# }
+#
+# # Create a Route53 alias record for the API that points to the ALB
+# resource "aws_route53_record" "api" {
+#   zone_id = data.aws_route53_zone.main.zone_id
+#   name    = "api.taskflow.indritcloud.com"
+#   type    = "A"
+#   allow_overwrite = true
+#
+#   alias {
+#     name                   = data.aws_lb.fastapi_alb.dns_name
+#     zone_id                = data.aws_lb.fastapi_alb.zone_id
+#     evaluate_target_health = false
+#   }
+# }
 
-data "aws_lb" "fastapi_alb" {
-  depends_on = [time_sleep.wait_for_alb]
-  tags = { ingress-name = "fastapi-ingress" }
-}
-
-# Create a Route53 alias record for the API that points to the ALB
-resource "aws_route53_record" "api" {
-  zone_id = data.aws_route53_zone.main.zone_id
-  name    = "api.taskflow.indritcloud.com"
-  type    = "A"
-  allow_overwrite = true
-
-  alias {
-    name                   = data.aws_lb.fastapi_alb.dns_name
-    zone_id                = data.aws_lb.fastapi_alb.zone_id
-    evaluate_target_health = false
-  }
-
-  # If the ALB is not yet present when terraform runs, this resource may fail.
-  # In CI you may need to ensure the cluster/ingress is created before this record is applied.
-}
+# NOTE: To automatically create the API DNS record, install external-dns and annotate your ingress:
+#   metadata:
+#     annotations:
+#       external-dns.alpha.kubernetes.io/hostname: "api.taskflow.indritcloud.com"
 
