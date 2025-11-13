@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useProject, useAddTask, useUpdateTask, useDeleteTask, useUpdateProject } from '../lib/hooks/useProject'
+import ProjectMembers from '../components/ProjectMembers'
 
 function TasksContainer({ projectId }) {
   const { data: project, isLoading: tasksLoading } = useProject(projectId)
@@ -53,7 +54,7 @@ function TasksContainer({ projectId }) {
 
 export default function ProjectPage() {
   const { id } = useParams()
-  const { data: project, isLoading } = useProject(id)
+  const { data: project, isLoading, refetch } = useProject(id)
   const addTask = useAddTask(id)
   const updateProject = useUpdateProject(id)
 
@@ -64,6 +65,8 @@ export default function ProjectPage() {
 
   if (isLoading) return <div className="loading">Loading project...</div>
   if (!project) return <div className="loading">Project not found</div>
+
+  const isOwner = project.user_role === 'owner'
 
   const onAdd = () => {
     if (!title) return
@@ -133,6 +136,13 @@ export default function ProjectPage() {
           </button>
         </div>
       </section>
+
+      {/* Members Section */}
+      <ProjectMembers 
+        project={project} 
+        isOwner={isOwner} 
+        onMemberChange={() => refetch()}
+      />
     </div>
   )
 }
