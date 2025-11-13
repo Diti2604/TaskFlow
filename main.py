@@ -11,14 +11,18 @@ load_dotenv()
 
 app = FastAPI()
 
-# CORS - Allow all origins for simplicity (restrict in production)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],    
+    allow_origins=[
+        "https://taskflow.indritcloud.com",
+        "https://www.taskflow.indritcloud.com",
+        "https://api.taskflow.indritcloud.com",
+    ],
     allow_credentials=True,
-    allow_methods=["*"],         
-    allow_headers=["*"]
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
 
 SECRET_NAME   = os.getenv("SECRET_NAME")        
 DATABASE_HOST = os.getenv("DATABASE_HOST")     
