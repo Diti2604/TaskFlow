@@ -84,6 +84,8 @@ jobs:
   deploy-to-eks:
     runs-on: ubuntu-latest
     needs: [terraform]
+    outputs:
+      alb_endpoint: ${{ steps.get_alb.outputs.alb_endpoint }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -127,7 +129,7 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
         run: |
           set -e
-          terraform init -upgrade -backend-config="bucket=${{ secrets.TF_BACKEND_BUCKET }}" -backend-config="key=${{ secrets.TF_BACKEND_KEY }}" -backend-config="region=${{ env.AWS_REGION }}"
+          terraform init -upgrade "
           RDS_ENDPOINT=$(terraform output -raw rds_endpoint)
           RDS_SECRET_ARN=$(terraform output -raw rds_secret_arn)
           echo "rds_endpoint=${RDS_ENDPOINT}" >> $GITHUB_OUTPUT
@@ -162,7 +164,6 @@ jobs:
             DB_NAME='database_1' \
             AWS_REGION='${{ env.AWS_REGION }}' \
             BOOTSTRAP_ON_START='true' \
-            JWT_SECRET='${{ secrets.JWT_SECRET }}'
 
           kubectl -n "$NS" set serviceaccount deployment/fastapi-deployment secrets-manager-sa
 # FAIL_STARTUP=true
@@ -170,6 +171,25 @@ jobs:
         id: wait_rollout             
         run: |
           kubectl -n "${K8S_NAMESPACE}" rollout status "deployment/fastapi-deployment" --timeout="${ROLLOUT_TIMEOUT}"
+
+      - name: Get ALB endpoint from ingress
+        id: get_alb
+        run: |
+          echo "Waiting for ALB endpoint to be provisioned..."
+          for i in {1..30}; do
+            ALB_ENDPOINT=$(kubectl -n "${K8S_NAMESPACE}" get ingress fastapi-ingress -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
+            if [ ! -z "$ALB_ENDPOINT" ]; then
+              echo "ALB endpoint found: $ALB_ENDPOINT"
+              echo "alb_endpoint=${ALB_ENDPOINT}" >> $GITHUB_OUTPUT
+              break
+            fi
+            echo "Waiting for ALB endpoint... attempt $i/30"
+            sleep 10
+          done
+          if [ -z "$ALB_ENDPOINT" ]; then
+            echo "Failed to get ALB endpoint after 5 minutes"
+            exit 1
+          fi
 
       - name: Information on why we got a failure
         if: failure()
@@ -190,7 +210,7 @@ jobs:
 
   deploy-to-s3:
     runs-on: ubuntu-latest
-    needs: [terraform]
+    needs: [terraform, deploy-to-eks]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -205,10 +225,16 @@ jobs:
         run: npm install
 
       - name: Set frontend build env (VITE_API_BASE)
-        working-directory: frontend/my-react-app
         run: |
-          # Set the frontend API base for the build. Adjust if you derive API host from terraform outputs.
-          echo "VITE_API_BASE=https://api.taskflow.indritcloud.com" >> $GITHUB_ENV
+          # Get ALB endpoint from the previous job
+          ALB_ENDPOINT="${{ needs.deploy-to-eks.outputs.alb_endpoint }}"
+          if [ -z "$ALB_ENDPOINT" ]; then
+            echo "ERROR: ALB endpoint not available from deploy-to-eks job"
+            exit 1
+          fi
+          # Use https if you have certificate, otherwise http
+          echo "VITE_API_BASE=https://${ALB_ENDPOINT}" >> $GITHUB_ENV
+          echo "Building frontend with API base: https://${ALB_ENDPOINT}"
 
       - name: Build project
         working-directory: frontend/my-react-app
@@ -230,7 +256,7 @@ jobs:
         id: tfoutputs
         run: |
           set -e
-          terraform init -upgrade -backend-config="bucket=${{ secrets.TF_BACKEND_BUCKET }}" -backend-config="key=${{ secrets.TF_BACKEND_KEY }}" -backend-config="region=${{ env.AWS_REGION }}"
+          terraform init -upgrade "
           BUCKET_NAME=$(terraform output -raw site_bucket_name)
           echo "BUCKET_NAME=${BUCKET_NAME}" >> $GITHUB_ENV
 
