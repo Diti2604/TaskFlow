@@ -35,9 +35,6 @@ resource "aws_subnet" "private-subnets" {
   vpc_id                  = aws_vpc.my-vpc.id
   cidr_block              = var.vpc_private_cidr_blocks[count.index]
   map_public_ip_on_launch = false
-  tags = {
-    Name                                        = "private-subnet-${count.index}"
-  }
   availability_zone = data.aws_availability_zones.available.names[count.index]
 }
 

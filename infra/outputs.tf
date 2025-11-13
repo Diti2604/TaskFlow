@@ -25,3 +25,18 @@ output "rds_secret_arn" {
   depends_on  = [aws_db_instance.database-1]
 }
 
+output "alb_endpoint" {
+  description = "ALB endpoint for FastAPI backend (use this for frontend VITE_API_BASE)"
+  value       = "Retrieve via: kubectl get ingress fastapi-ingress -n default -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'"
+}
+
+output "public_subnet_ids" {
+  description = "Public subnet IDs (for internet-facing ALB)"
+  value       = aws_subnet.public-subnets[*].id
+}
+
+output "private_subnet_ids" {
+  description = "Private subnet IDs (for EKS nodes and RDS)"
+  value       = aws_subnet.private-subnets[*].id
+}
+

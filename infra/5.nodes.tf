@@ -38,7 +38,7 @@ resource "aws_eks_node_group" "node_group_resource" {
   cluster_name    = aws_eks_cluster.cluster1.name
   node_group_name = var.node_group_name
   node_role_arn   = aws_iam_role.nodes.arn
-  subnet_ids      = slice(aws_subnet.public-subnets[*].id, 0, var.public_subnets_count)
+  subnet_ids      = slice(aws_subnet.private-subnets[*].id, 0, var.private_subnets_count)
 
   capacity_type  = "SPOT"
   instance_types = ["t3.small"]
