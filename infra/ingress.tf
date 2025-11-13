@@ -9,10 +9,17 @@ resource "kubernetes_ingress_v1" "fastapi" {
       "alb.ingress.kubernetes.io/subnets"          = join(",", aws_subnet.public-subnets[*].id)
       "alb.ingress.kubernetes.io/listen-ports"     = "[{\"HTTP\":80},{\"HTTPS\":443}]"
       "alb.ingress.kubernetes.io/ssl-redirect"     = "443"
-      "alb.ingress.kubernetes.io/certificate-arn"  = aws_acm_certificate.cert.arn
+      "alb.ingress.kubernetes.io/certificate-arn"  = aws_acm_certificate_validation.cert.certificate_arn
       "alb.ingress.kubernetes.io/target-type"      = "ip"
       "alb.ingress.kubernetes.io/healthcheck-path" = "/"
-      "alb.ingress.kubernetes.io/tags"             = "app=fastapi,ingress-name=fastapi-ingress"
+      "alb.ingress.kubernetes.io/actions.cors" = jsonencode({
+        Type = "fixed-response",
+        FixedResponseConfig = {
+          ContentType = "application/json",
+          StatusCode  = "200",
+          MessageBody = "{\"message\":\"CORS preflight OK\"}"
+        }
+      })
     }
   }
 
@@ -20,17 +27,32 @@ resource "kubernetes_ingress_v1" "fastapi" {
     ingress_class_name = "alb"
 
     rule {
-      host = "api.taskflow.indritcloud.com"
+      host = "api.taskflow.indritcloud.com"  
 
       http {
         path {
           path      = "/"
           path_type = "Prefix"
+
           backend {
             service {
               name = "fastapi-service"
               port {
                 number = 80
+              }
+            }
+          }
+        }
+
+        path {
+          path      = "/cors"
+          path_type = "Exact"
+
+          backend {
+            service {
+              name = "cors"
+              port {
+                name = "use-annotation"
               }
             }
           }

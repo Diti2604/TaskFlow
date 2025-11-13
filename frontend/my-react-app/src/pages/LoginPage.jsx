@@ -5,7 +5,6 @@ import api from '../lib/api'
 export default function LoginPage() {
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
-  const [email, setEmail] = useState('')
   const [isLogin, setIsLogin] = useState(true)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -27,9 +26,7 @@ export default function LoginPage() {
 
     try {
       const endpoint = isLogin ? '/login' : '/signup'
-      const payload = isLogin 
-        ? { name, password }
-        : { name, password, email }
+      const payload = { name, password }
       
       const response = await api.post(endpoint, payload)
       
@@ -82,19 +79,6 @@ export default function LoginPage() {
               required
             />
           </div>
-          
-          {!isLogin && (
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: 'block', marginBottom: 6 }}>Email (optional)</label>
-              <input 
-                className="input" 
-                type="email"
-                value={email} 
-                onChange={(e) => setEmail(e.target.value)} 
-                placeholder="you@example.com" 
-              />
-            </div>
-          )}
           
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
             <button className="btn btn-primary" type="submit" disabled={loading}>
