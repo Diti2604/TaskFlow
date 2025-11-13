@@ -72,6 +72,7 @@ resource "helm_release" "aws_lb_controller" {
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
+  replace    = true
   depends_on = [kubernetes_service_account.alb_controller, time_sleep.pre_alb_buffer]
   values = [yamlencode({
     clusterName = var.cluster_name
