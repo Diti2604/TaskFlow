@@ -84,8 +84,7 @@ resource "helm_release" "aws_lb_controller" {
   })]
 }
 
-data "aws_caller_identity" "current" {}
-
+ 
 resource "aws_iam_role" "fastapi_pod_identity" {
   name = "fastapi-pod-identity-role"
 

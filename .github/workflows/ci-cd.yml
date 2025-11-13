@@ -34,7 +34,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: ${{ env.TF_DIR }}
-        run: terraform init -upgrade
+        run: terraform init -upgrade -backend-config="bucket=${{ secrets.TF_BACKEND_BUCKET }}" -backend-config="key=${{ secrets.TF_BACKEND_KEY }}" -backend-config="region=${{ env.AWS_REGION }}"
 
       - name: Terraform Validate
         working-directory: ${{ env.TF_DIR }}
@@ -106,7 +106,7 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
         run: |
           set -e
-          terraform init -upgrade
+          terraform init -upgrade -backend-config="bucket=${{ secrets.TF_BACKEND_BUCKET }}" -backend-config="key=${{ secrets.TF_BACKEND_KEY }}" -backend-config="region=${{ env.AWS_REGION }}"
           RDS_ENDPOINT=$(terraform output -raw rds_endpoint)
           RDS_SECRET_ARN=$(terraform output -raw rds_secret_arn)
           echo "rds_endpoint=${RDS_ENDPOINT}" >> $GITHUB_OUTPUT
@@ -209,7 +209,7 @@ jobs:
         id: tfoutputs
         run: |
           set -e
-          terraform init -upgrade
+          terraform init -upgrade -backend-config="bucket=${{ secrets.TF_BACKEND_BUCKET }}" -backend-config="key=${{ secrets.TF_BACKEND_KEY }}" -backend-config="region=${{ env.AWS_REGION }}"
           BUCKET_NAME=$(terraform output -raw site_bucket_name)
           echo "BUCKET_NAME=${BUCKET_NAME}" >> $GITHUB_ENV
 

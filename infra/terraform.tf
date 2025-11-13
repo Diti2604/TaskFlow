@@ -14,7 +14,7 @@ terraform {
     }
   }
   backend "s3" {
-     bucket = "my-s3-bucket-381642375290"
+     bucket = "my-s3-bucket-851725395166"
      key = "backend"
      region = "us-east-1"
   }
@@ -22,5 +22,5 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
-  alias  = "us_east_1"
+  alias  = "us"
 }

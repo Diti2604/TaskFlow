@@ -1,7 +1,7 @@
-data "aws_caller_identity" "current" {}
+data "aws_caller_identity" "root" {}
 
 locals {
-  account_id  = data.aws_caller_identity.current.account_id
+  account_id  = data.aws_caller_identity.root.account_id
   root_domain = "indritcloud.com"
   names       = [
     "taskflow.${local.root_domain}",
@@ -10,7 +10,7 @@ locals {
 
 resource "aws_acm_certificate" "cert" {
   domain_name       = "indritcloud.com"
-  provider                = aws.us_east_1
+  provider                = aws.us
   subject_alternative_names = local.names
   validation_method = "DNS"
 
