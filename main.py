@@ -10,17 +10,6 @@ from passlib.context import CryptContext
 
 load_dotenv()
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-def hash_password(password: str) -> str:
-    """Hash a password using bcrypt"""
-    return pwd_context.hash(password)
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash"""
-    return pwd_context.verify(plain_password, hashed_password)
-
 app = FastAPI()
 
 app.add_middleware(
@@ -234,37 +223,18 @@ def get_connection():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB connection failed: {e}")
 
+# ============= PASSWORD HASHING =============
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
 @app.get("/")
 def root():
     return {"message": "Hello from FastAPI on EC2!!", "status": "healthy"}
-
-@app.post("/migrate-passwords")
-def migrate_passwords(secret_key: str):
-    """Migrate plain-text passwords to hashed passwords (run once after deployment)"""
-    # Simple security check - only allow if correct secret key is provided
-    if secret_key != "migrate-2025-secure":
-        raise HTTPException(status_code=403, detail="Invalid secret key")
-    
-    conn = get_connection()
-    migrated = 0
-    try:
-        with conn.cursor() as cur:
-            # Get all users
-            cur.execute("SELECT id, name, password FROM users")
-            users = cur.fetchall()
-            
-            for user in users:
-                # Check if password is already hashed (bcrypt hashes start with $2b$)
-                if not user['password'].startswith('$2b$'):
-                    # Hash the plain-text password
-                    hashed = hash_password(user['password'])
-                    cur.execute("UPDATE users SET password=%s WHERE id=%s", (hashed, user['id']))
-                    migrated += 1
-    finally:
-        try: conn.close()
-        except Exception: pass
-    
-    return {"message": f"Migrated {migrated} passwords to hashed format"}
 
 # ============= AUTH ENDPOINTS =============
 @app.post("/signup")
@@ -278,10 +248,10 @@ def signup(user: UserCreate):
                 raise HTTPException(status_code=400, detail="User already exists")
             
             # Hash the password before storing
-            hashed_password = hash_password(user.password)
+            hashed = hash_password(user.password)
             cur.execute(
                 "INSERT INTO users (name, password) VALUES (%s, %s)",
-                (user.name, hashed_password),
+                (user.name, hashed),
             )
             user_id = cur.lastrowid
     finally:
@@ -304,12 +274,20 @@ def login(user: UserLogin):
         try: conn.close()
         except Exception: pass
     
-    # Verify password hash
-    if not row or not verify_password(user.password, row['password']):
+    if not row:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    # Don't return password in response
-    return {"message": f"Welcome, {user.name}!", "user": {"id": row['id'], "name": row['name']}}
+    # Verify password (supports both hashed and plain text for migration period)
+    if row['password'].startswith('$2b$'):
+        # Hashed password - use verify_password
+        if not verify_password(user.password, row['password']):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+    else:
+        # Plain text password (for existing users) - direct comparison
+        if user.password != row['password']:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    return {"message": f"Welcome, {user.name}!", "user": row}
 
 # ============= PROJECT ENDPOINTS =============
 @app.get("/api/projects")
