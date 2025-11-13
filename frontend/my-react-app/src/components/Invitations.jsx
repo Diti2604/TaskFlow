@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import api from '../lib/api'
+import { showToast } from '../lib/toast'
 
 export default function Invitations({ onInvitationResponse }) {
   const [invitations, setInvitations] = useState([])
   const [loading, setLoading] = useState(true)
+  const [processingId, setProcessingId] = useState(null)
 
   useEffect(() => {
     fetchInvitations()
@@ -20,24 +22,30 @@ export default function Invitations({ onInvitationResponse }) {
     }
   }
 
-  const handleAccept = async (invitationId) => {
+  const handleAccept = async (invitationId, projectName) => {
+    setProcessingId(invitationId)
     try {
       await api.post(`/api/invitations/${invitationId}/accept`)
-      alert('Invitation accepted! The project will now appear in your dashboard.')
+      showToast(`You joined "${projectName}"!`, 'success')
       fetchInvitations() // Refresh invitations
       if (onInvitationResponse) onInvitationResponse() // Refresh projects list
     } catch (err) {
-      alert(err.response?.data?.detail || 'Failed to accept invitation')
+      showToast(err.response?.data?.detail || 'Failed to accept invitation', 'error')
+    } finally {
+      setProcessingId(null)
     }
   }
 
-  const handleDecline = async (invitationId) => {
+  const handleDecline = async (invitationId, projectName) => {
+    setProcessingId(invitationId)
     try {
       await api.post(`/api/invitations/${invitationId}/decline`)
-      alert('Invitation declined.')
+      showToast(`Declined invitation to "${projectName}"`, 'info')
       fetchInvitations() // Refresh invitations
     } catch (err) {
-      alert(err.response?.data?.detail || 'Failed to decline invitation')
+      showToast(err.response?.data?.detail || 'Failed to decline invitation', 'error')
+    } finally {
+      setProcessingId(null)
     }
   }
 
@@ -70,15 +78,17 @@ export default function Invitations({ onInvitationResponse }) {
             <div style={{ display: 'flex', gap: 8 }}>
               <button 
                 className="btn btn-primary" 
-                onClick={() => handleAccept(inv.id)}
+                onClick={() => handleAccept(inv.id, inv.project_name)}
+                disabled={processingId === inv.id}
               >
-                Accept
+                {processingId === inv.id ? 'Accepting...' : 'Accept'}
               </button>
               <button 
                 className="btn" 
-                onClick={() => handleDecline(inv.id)}
+                onClick={() => handleDecline(inv.id, inv.project_name)}
+                disabled={processingId === inv.id}
               >
-                Decline
+                {processingId === inv.id ? 'Declining...' : 'Decline'}
               </button>
             </div>
           </div>
