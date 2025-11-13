@@ -23,7 +23,9 @@ resource "aws_subnet" "public-subnets" {
   cidr_block              = var.vpc_public_cidr_blocks[count.index]
   map_public_ip_on_launch = true
   tags = {
-    Name = "public-subnet-${count.index}"
+    Name                                        = "public-subnet-${count.index}"
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+    "kubernetes.io/role/elb"                    = "1"
   }
   availability_zone = data.aws_availability_zones.available.names[count.index]
 }
@@ -32,11 +34,9 @@ resource "aws_subnet" "private-subnets" {
   count                   = var.private_subnets_count
   vpc_id                  = aws_vpc.my-vpc.id
   cidr_block              = var.vpc_private_cidr_blocks[count.index]
-  map_public_ip_on_launch = true 
+  map_public_ip_on_launch = false
   tags = {
     Name                                        = "private-subnet-${count.index}"
-    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
-    "kubernetes.io/role/elb"                    = "1"
   }
   availability_zone = data.aws_availability_zones.available.names[count.index]
 }
