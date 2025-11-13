@@ -34,7 +34,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: ${{ env.TF_DIR }}
-        run: terraform init -upgrade -backend-config="bucket=${{ secrets.TF_BACKEND_BUCKET }}" -backend-config="key=${{ secrets.TF_BACKEND_KEY }}" -backend-config="region=${{ env.AWS_REGION }}"
+        run: terraform init -upgrade
 
       - name: Terraform Validate
         working-directory: ${{ env.TF_DIR }}
