@@ -22,11 +22,9 @@ resource "aws_db_instance" "database-1" {
   apply_immediately             = true
   depends_on                    = [aws_vpc.my-vpc]
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
-  # provisioner "local-exec" {
-  #   command = "Get-Content -Raw rds_sql_scripts.sql | & \"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -h ${self.address} -u ${self.username} -p${self.password}"
-  #   working_dir = path.module
-  #   interpreter = ["powershell", "-command"]
-  # }
+  tags = {
+    Name = "database-1"
+  }
 }
 
 

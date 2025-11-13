@@ -1,16 +1,24 @@
-import os, time, json, threading, math, pymysql, boto3
-from fastapi import FastAPI, HTTPException
+import os, time, json, threading, math, pymysql, boto3 
+from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
+from typing import Optional
+from passlib.hash import bcrypt
+from datetime import datetime, timedelta
+from jose import JWTError, jwt
+
 
 load_dotenv()
 
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[""], allow_credentials=True, allow_methods=[""], allow_headers=["*"]
+    allow_origins=["*"],    
+    allow_credentials=True,
+    allow_methods=["*"],         
+    allow_headers=["*"]
 )
 
 SECRET_NAME   = os.getenv("SECRET_NAME")        
@@ -43,6 +51,50 @@ def connect_mysql(host, user, password, database=None):
         cursorclass=pymysql.cursors.DictCursor,
         connect_timeout=10,
     )
+# NEW auth config
+JWT_SECRET = os.getenv("JWT_SECRET", "change-this-secret")
+JWT_ALGO = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+
+def hash_password(p: str) -> str:
+    return bcrypt.hash(p)
+
+def verify_password(p: str, h: str) -> bool:
+    return bcrypt.verify(p, h)
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGO)
+
+def get_current_user(authorization: Optional[str] = Header(None)):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing auth header")
+    try:
+        scheme, token = authorization.split()
+        if scheme.lower() != "bearer":
+            raise HTTPException(status_code=401, detail="Invalid auth scheme")
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
+        username = payload.get("sub")
+        if not username:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except (ValueError, JWTError):
+        raise HTTPException(status_code=401, detail="Invalid token")
+    # fetch user row to validate exists
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, name FROM users WHERE name=%s", (username,))
+            row = cur.fetchone()
+    finally:
+        try: conn.close()
+        except: pass
+    if not row:
+        raise HTTPException(status_code=401, detail="User not found")
+    return row
+
+# Modify _ensure_db_and_table to create proper schema (password_hash, projects, tasks, analytics)
 def _ensure_db_and_table():
     creds = get_secret()
     user, password = creds["username"], creds["password"]
@@ -59,7 +111,6 @@ def _ensure_db_and_table():
         try: conn.close()
         except Exception: pass
 
-
     conn_db = connect_mysql(DATABASE_HOST, user, password, database=DB_NAME)
     try:
         conn_db.ping(reconnect=True)
@@ -67,11 +118,49 @@ def _ensure_db_and_table():
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     id INT AUTO_INCREMENT PRIMARY KEY,
-                    name VARCHAR(255) NOT NULL,
-                    password VARCHAR(255) NOT NULL
+                    name VARCHAR(255) NOT NULL UNIQUE,
+                    password_hash VARCHAR(255) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             """)
-        _log("Table users ensured.")
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS projects (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    owner_id INT NOT NULL,
+                    name VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    UNIQUE KEY (owner_id, name),
+                    INDEX (created_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS tasks (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    project_id INT NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    status VARCHAR(50) DEFAULT 'todo',
+                    assignee_id INT NULL,
+                    due_date DATE NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX (project_id), INDEX (status)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS analytics_events (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    project_id INT NULL,
+                    event_type VARCHAR(128) NOT NULL,
+                    payload JSON,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX (project_id),
+                    INDEX (event_type),
+                    INDEX (created_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """)
+        _log("DB schema ensured.")
     finally:
         try: conn_db.close()
         except Exception: pass
@@ -128,16 +217,18 @@ def get_connection():
 
 @app.get("/")
 def root():
-    return {"Hello from FastAPI on EC2!!"}
+    return {"message": "Hello from FastAPI on EC2!!"}   # was a set literal
 
+# Update create_user and login routes to use hashing + JWT
 @app.post("/users")
 def create_user(user: User):
     conn = get_connection()
     try:
         with conn.cursor() as cur:
+            ph = hash_password(user.password)
             cur.execute(
-                "INSERT INTO users (name, password) VALUES (%s, %s)",
-                (user.name, user.password),
+                "INSERT INTO users (name, password_hash) VALUES (%s, %s)",
+                (user.name, ph),
             )
     finally:
         try: conn.close()
@@ -150,13 +241,64 @@ def login(user: User):
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT * FROM users WHERE name=%s AND password=%s",
-                (user.name, user.password),
+                "SELECT * FROM users WHERE name=%s",
+                (user.name,),
             )
             row = cur.fetchone()
     finally:
         try: conn.close()
         except Exception: pass
-    if not row:
+    if not row or not verify_password(user.password, row.get("password_hash")):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    return {"message": f"Welcome, {user.name}!"}
+    token = create_access_token({"sub": user.name})
+    return {"access_token": token, "token_type": "bearer"}
+
+# Minimal projects endpoints
+class ProjectIn(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+class TaskIn(BaseModel):
+    title: str
+    description: Optional[str] = None
+
+@app.post("/api/projects")
+def create_project(p: ProjectIn, user = Depends(get_current_user)):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO projects (owner_id, name, description) VALUES (%s,%s,%s)",
+                        (user["id"], p.name, p.description))
+            pid = cur.lastrowid
+            cur.execute("SELECT * FROM projects WHERE id=%s", (pid,))
+            row = cur.fetchone()
+    finally:
+        try: conn.close()
+        except: pass
+    return row
+
+@app.get("/api/projects")
+def list_projects(user = Depends(get_current_user)):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM projects WHERE owner_id=%s", (user["id"],))
+            rows = cur.fetchall()
+    finally:
+        try: conn.close()
+        except: pass
+    return rows
+
+@app.post("/api/projects/{project_id}/tasks")
+def add_task(project_id: int, t: TaskIn, user = Depends(get_current_user)):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO tasks (project_id, title, description) VALUES (%s,%s,%s)",
+                        (project_id, t.title, t.description))
+            cur.execute("SELECT * FROM tasks WHERE id=%s", (cur.lastrowid,))
+            row = cur.fetchone()
+    finally:
+        try: conn.close()
+        except: pass
+    return row

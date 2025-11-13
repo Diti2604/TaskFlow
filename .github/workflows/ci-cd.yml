@@ -101,14 +101,23 @@ jobs:
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --region "${AWS_REGION}" --name "${EKS_CLUSTER}"
 
-      - name: Discover RDS endpoint & secret
-        id: rds
+      - name: Read Terraform outputs (RDS)
+        id: tf_rds
+        working-directory: ${{ env.TF_DIR }}
         run: |
-          DB_ID=database-1
-          RDS_ENDPOINT=$(aws rds describe-db-instances --db-instance-identifier "$DB_ID" --query 'DBInstances[0].Endpoint.Address' --output text)
-          SECRET_ARN=$(aws rds describe-db-instances --db-instance-identifier "$DB_ID" --query 'DBInstances[0].MasterUserSecret.SecretArn' --output text)
-          echo "endpoint=${RDS_ENDPOINT}"   >> "$GITHUB_OUTPUT"
-          echo "secret_arn=${SECRET_ARN}"   >> "$GITHUB_OUTPUT"
+          set -e
+          terraform init -upgrade
+          RDS_ENDPOINT=$(terraform output -raw rds_endpoint)
+          RDS_SECRET_ARN=$(terraform output -raw rds_secret_arn)
+          echo "rds_endpoint=${RDS_ENDPOINT}" >> $GITHUB_OUTPUT
+          echo "rds_secret_arn=${RDS_SECRET_ARN}" >> $GITHUB_OUTPUT
+
+      - name: Validate RDS outputs
+        run: |
+          if [ -z "${{ steps.tf_rds.outputs.rds_endpoint }}" ] || [ -z "${{ steps.tf_rds.outputs.rds_secret_arn }}" ]; then
+            echo "RDS outputs missing; aborting.";
+            exit 1;
+          fi
 
       - name: Create/Update K8s resources
         shell: bash
@@ -127,11 +136,12 @@ jobs:
 
           kubectl -n "${NS}" set image "deployment/${DEPLOY}" fastapi="${REPOSITORY_URI}:${IMAGE_TAG}" --record=true
           kubectl -n "${NS}" set env "deployment/${DEPLOY}" \
-            SECRET_NAME='${{ steps.rds.outputs.secret_arn }}' \
-            DATABASE_HOST='${{ steps.rds.outputs.endpoint }}' \
+            SECRET_NAME='${{ steps.tf_rds.outputs.rds_secret_arn }}' \
+            DATABASE_HOST='${{ steps.tf_rds.outputs.rds_endpoint }}' \
             DB_NAME='database_1' \
             AWS_REGION='${{ env.AWS_REGION }}' \
-            BOOTSTRAP_ON_START='true'
+            BOOTSTRAP_ON_START='true' \
+            JWT_SECRET='${{ secrets.JWT_SECRET }}'
 
           kubectl -n "$NS" set serviceaccount deployment/fastapi-deployment secrets-manager-sa
 # FAIL_STARTUP=true
@@ -173,6 +183,12 @@ jobs:
         working-directory: frontend/my-react-app
         run: npm install
 
+      - name: Set frontend build env (VITE_API_BASE)
+        working-directory: frontend/my-react-app
+        run: |
+          # Set the frontend API base for the build. Adjust if you derive API host from terraform outputs.
+          echo "VITE_API_BASE=https://api.taskflow.indritcloud.com" >> $GITHUB_ENV
+
       - name: Build project
         working-directory: frontend/my-react-app
         run: npm run build
@@ -188,8 +204,16 @@ jobs:
         run: |
             set -e
             echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
+      - name: Read Terraform outputs (get S3 bucket)
+        working-directory: ${{ env.TF_DIR }}
+        id: tfoutputs
+        run: |
+          set -e
+          terraform init -upgrade
+          BUCKET_NAME=$(terraform output -raw site_bucket_name)
+          echo "BUCKET_NAME=${BUCKET_NAME}" >> $GITHUB_ENV
 
       - name: Sync files to S3
-        run: aws s3 sync frontend/my-react-app s3://my-tf-bucket-${{ env.ACCOUNT_ID }}-for-static-website-hosting --delete --exclude "node_modules/*" --exclude "package*.json" --exclude ".git/*" --exclude "public/*" --exclude "src/*"
-        env:
-          S3_BUCKET_NAME: my-tf-bucket-${{ env.ACCOUNT_ID }}-for-static-website-hosting
+        run: |
+          aws s3 sync frontend/my-react-app s3://$BUCKET_NAME --delete --exclude "node_modules/*" --exclude "package*.json" --exclude ".git/*" --exclude "public/*" --exclude "src/*"
+        # BUCKET_NAME is injected into the environment via $GITHUB_ENV in the previous step

@@ -2,7 +2,7 @@
 variable "account_id" {
   type        = string
   description = "Account ID of new playgrounds"
-  default     = "730335621500"
+  default     = "851725395166"
 }
 
 #VPC VARIABLES
@@ -48,13 +48,13 @@ variable "private_subnets_count" {
 variable "elastic_ip_addresses_count" {
   type        = number
   description = "The number of EIP addresses in the VPC"
-  default     = 2
+  default     = 1
 }
 
 variable "nat_gateway_count" {
   type        = number
   description = "The number of NAT Gateways in the VPC"
-  default     = 2
+  default     = 1
 }
 
 variable "route_table_cidr_block" {
