@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useProject, useAddTask, useUpdateTask, useDeleteTask, useUpdateProject } from '../lib/hooks/useProject'
 import ProjectMembers from '../components/ProjectMembers'
 
-function TasksContainer({ projectId }) {
+function TasksContainer({ projectId, isOwner }) {
   const { data: project, isLoading: tasksLoading } = useProject(projectId)
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
@@ -34,13 +34,15 @@ function TasksContainer({ projectId }) {
                 >
                   Advance
                 </button>
-                <button 
-                  style={{ marginLeft: 8 }} 
-                  className="btn" 
-                  onClick={() => deleteTask.mutate({ id: t.id, projectId: parseInt(projectId) })}
-                >
-                  Delete
-                </button>
+                {isOwner && (
+                  <button 
+                    style={{ marginLeft: 8 }} 
+                    className="btn" 
+                    onClick={() => deleteTask.mutate({ id: t.id, projectId: parseInt(projectId) })}
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
             </div>
           ))
@@ -118,7 +120,7 @@ export default function ProjectPage() {
       {!isEditingName && <p className="card-desc">{project.description}</p>}
 
       <section style={{ marginTop: 24 }}>
-        <TasksContainer projectId={id} />
+        <TasksContainer projectId={id} isOwner={isOwner} />
 
         <div style={{ marginTop: 16 }}>
           <input 

@@ -1,9 +1,10 @@
 import React from 'react'
 import { useProjects, useCreateProject } from '../lib/hooks/useProjects'
 import ProjectCard from '../components/ProjectCard'
+import Invitations from '../components/Invitations'
 
 export default function DashboardPage() {
-  const { data: projects = [], isLoading } = useProjects()
+  const { data: projects = [], isLoading, refetch } = useProjects()
   const createProject = useCreateProject()
 
   return (
@@ -30,6 +31,10 @@ export default function DashboardPage() {
               }
             })()}
           </div>
+          
+          {/* Show pending invitations */}
+          <Invitations onInvitationResponse={() => refetch()} />
+          
           <div className="grid cols-3">
             {projects.map((p) => (
               <ProjectCard key={p.id} project={p} />
