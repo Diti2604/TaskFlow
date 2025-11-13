@@ -57,6 +57,9 @@ class TaskUpdate(BaseModel):
     description: Optional[str] = None
     due_date: Optional[str] = None
 
+class ProjectMemberAdd(BaseModel):
+    username: str
+
 def _log(msg): 
     print(f"[bootstrap] {msg}", flush=True)
 
@@ -132,6 +135,20 @@ def _ensure_db_and_table():
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
                     FOREIGN KEY (assignee_id) REFERENCES users(id) ON DELETE SET NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """)
+            
+            # Project Members table (for collaboration)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS project_members (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    project_id INT NOT NULL,
+                    user_id INT NOT NULL,
+                    role VARCHAR(50) DEFAULT 'member',
+                    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    UNIQUE KEY unique_member (project_id, user_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             """)
         _log("All tables ensured.")
@@ -234,22 +251,40 @@ def login(user: UserLogin):
 # ============= PROJECT ENDPOINTS =============
 @app.get("/api/projects")
 def get_projects(user_id: int):
-    """Get all projects with their tasks for a specific user"""
+    """Get all projects (owned + shared) for a specific user"""
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id is required")
     
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT id, name, description, created_at FROM projects WHERE user_id=%s ORDER BY created_at DESC", (user_id,))
+            # Get owned projects + projects user is a member of
+            cur.execute("""
+                SELECT DISTINCT p.id, p.name, p.description, p.created_at, p.user_id,
+                       CASE WHEN p.user_id = %s THEN 'owner' ELSE 'member' END as user_role
+                FROM projects p
+                LEFT JOIN project_members pm ON p.id = pm.project_id
+                WHERE p.user_id = %s OR pm.user_id = %s
+                ORDER BY p.created_at DESC
+            """, (user_id, user_id, user_id))
             projects = cur.fetchall()
             
             for project in projects:
+                # Get tasks
                 cur.execute(
                     "SELECT id, title, description, status, due_date, assignee_id FROM tasks WHERE project_id=%s ORDER BY created_at",
                     (project['id'],)
                 )
                 project['tasks'] = cur.fetchall()
+                
+                # Get members
+                cur.execute("""
+                    SELECT u.id, u.name, pm.role
+                    FROM project_members pm
+                    JOIN users u ON pm.user_id = u.id
+                    WHERE pm.project_id = %s
+                """, (project['id'],))
+                project['members'] = cur.fetchall()
     finally:
         try: conn.close()
         except Exception: pass
@@ -276,23 +311,39 @@ def create_project(project: ProjectCreate, user_id: int):
 
 @app.get("/api/projects/{project_id}")
 def get_project(project_id: int, user_id: int):
-    """Get a specific project with tasks (user must own the project)"""
+    """Get a specific project with tasks (user must own or be a member)"""
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id is required")
     
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT id, name, description, created_at FROM projects WHERE id=%s AND user_id=%s", (project_id, user_id))
+            # Check if user owns project or is a member
+            cur.execute("""
+                SELECT DISTINCT p.id, p.name, p.description, p.created_at, p.user_id,
+                       CASE WHEN p.user_id = %s THEN 'owner' ELSE 'member' END as user_role
+                FROM projects p
+                LEFT JOIN project_members pm ON p.id = pm.project_id
+                WHERE p.id = %s AND (p.user_id = %s OR pm.user_id = %s)
+            """, (user_id, project_id, user_id, user_id))
             project = cur.fetchone()
             if not project:
-                raise HTTPException(status_code=404, detail="Project not found")
+                raise HTTPException(status_code=404, detail="Project not found or access denied")
             
             cur.execute(
                 "SELECT id, title, description, status, due_date, assignee_id FROM tasks WHERE project_id=%s ORDER BY created_at",
                 (project_id,)
             )
             project['tasks'] = cur.fetchall()
+            
+            # Get members
+            cur.execute("""
+                SELECT u.id, u.name, pm.role
+                FROM project_members pm
+                JOIN users u ON pm.user_id = u.id
+                WHERE pm.project_id = %s
+            """, (project_id,))
+            project['members'] = cur.fetchall()
     finally:
         try: conn.close()
         except Exception: pass
@@ -321,6 +372,98 @@ def update_project(project_id: int, project: ProjectCreate, user_id: int):
         try: conn.close()
         except Exception: pass
     return updated
+
+# ============= USER & MEMBER ENDPOINTS =============
+@app.get("/api/users/search")
+def search_users(query: str, user_id: int):
+    """Search for users by username (exclude current user)"""
+    if not user_id or not query:
+        return []
+    
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, name FROM users WHERE name LIKE %s AND id != %s LIMIT 10",
+                (f"%{query}%", user_id)
+            )
+            users = cur.fetchall()
+    finally:
+        try: conn.close()
+        except Exception: pass
+    return users
+
+@app.post("/api/projects/{project_id}/members")
+def add_project_member(project_id: int, member: ProjectMemberAdd, user_id: int):
+    """Add a member to a project (only owner can add members)"""
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+    
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            # Verify current user is the owner
+            cur.execute("SELECT user_id FROM projects WHERE id=%s", (project_id,))
+            project = cur.fetchone()
+            if not project or project['user_id'] != user_id:
+                raise HTTPException(status_code=403, detail="Only project owner can add members")
+            
+            # Find user by username
+            cur.execute("SELECT id FROM users WHERE name=%s", (member.username,))
+            target_user = cur.fetchone()
+            if not target_user:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            target_user_id = target_user['id']
+            
+            # Check if already owner
+            if target_user_id == user_id:
+                raise HTTPException(status_code=400, detail="Cannot add yourself as member")
+            
+            # Check if already a member
+            cur.execute(
+                "SELECT id FROM project_members WHERE project_id=%s AND user_id=%s",
+                (project_id, target_user_id)
+            )
+            if cur.fetchone():
+                raise HTTPException(status_code=400, detail="User is already a member")
+            
+            # Add member
+            cur.execute(
+                "INSERT INTO project_members (project_id, user_id, role) VALUES (%s, %s, 'member')",
+                (project_id, target_user_id)
+            )
+    finally:
+        try: conn.close()
+        except Exception: pass
+    return {"message": f"User {member.username} added to project"}
+
+@app.delete("/api/projects/{project_id}/members/{member_user_id}")
+def remove_project_member(project_id: int, member_user_id: int, user_id: int):
+    """Remove a member from a project (only owner can remove)"""
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+    
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            # Verify current user is the owner
+            cur.execute("SELECT user_id FROM projects WHERE id=%s", (project_id,))
+            project = cur.fetchone()
+            if not project or project['user_id'] != user_id:
+                raise HTTPException(status_code=403, detail="Only project owner can remove members")
+            
+            # Remove member
+            cur.execute(
+                "DELETE FROM project_members WHERE project_id=%s AND user_id=%s",
+                (project_id, member_user_id)
+            )
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Member not found")
+    finally:
+        try: conn.close()
+        except Exception: pass
+    return {"message": "Member removed"}
 
 # ============= TASK ENDPOINTS =============
 @app.post("/api/projects/{project_id}/tasks")
@@ -395,7 +538,7 @@ def delete_task(task_id: int):
 # ============= ANALYTICS ENDPOINTS =============
 @app.get("/api/analytics")
 def get_analytics(user_id: int):
-    """Get task analytics for a specific user"""
+    """Get task analytics for a specific user (owned + shared projects)"""
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id is required")
     
@@ -406,9 +549,10 @@ def get_analytics(user_id: int):
                 SELECT t.status, COUNT(*) as count 
                 FROM tasks t
                 JOIN projects p ON t.project_id = p.id
-                WHERE p.user_id = %s
+                LEFT JOIN project_members pm ON p.id = pm.project_id
+                WHERE p.user_id = %s OR pm.user_id = %s
                 GROUP BY t.status
-            """, (user_id,))
+            """, (user_id, user_id))
             rows = cur.fetchall()
             
             task_status_counts = {
