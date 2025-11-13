@@ -34,16 +34,14 @@ export function useUpdateTask() {
       return res.data
     },
     onSuccess: (data, variables) => {
-      // Invalidate the specific project query
-      if (data?.project_id) {
-        qc.invalidateQueries({ queryKey: ['project', data.project_id] })
+      const projectId = variables?.projectId || data?.project_id
+      
+      // Refetch immediately with no cache
+      if (projectId) {
+        qc.refetchQueries({ queryKey: ['project', projectId] })
       }
-      if (variables?.projectId) {
-        qc.invalidateQueries({ queryKey: ['project', variables.projectId] })
-      }
-      // Invalidate all projects and analytics
-      qc.invalidateQueries({ queryKey: ['projects'] })
-      qc.invalidateQueries({ queryKey: ['analytics'] })
+      qc.refetchQueries({ queryKey: ['projects'] })
+      qc.refetchQueries({ queryKey: ['analytics'] })
     },
   })
 }
@@ -56,13 +54,12 @@ export function useDeleteTask() {
       return { ...res.data, projectId }
     },
     onSuccess: (data) => {
-      // Invalidate the specific project query
+      // Refetch immediately with no cache
       if (data?.projectId) {
-        qc.invalidateQueries({ queryKey: ['project', data.projectId] })
+        qc.refetchQueries({ queryKey: ['project', data.projectId] })
       }
-      // Invalidate all projects and analytics
-      qc.invalidateQueries({ queryKey: ['projects'] })
-      qc.invalidateQueries({ queryKey: ['analytics'] })
+      qc.refetchQueries({ queryKey: ['projects'] })
+      qc.refetchQueries({ queryKey: ['analytics'] })
     },
   })
 }

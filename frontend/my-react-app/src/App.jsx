@@ -62,9 +62,7 @@ export default function App() {
 										<Link to="/analytics">Analytics</Link>
 									</nav>
 								</div>
-								<div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-									{/* <UserMenu /> */}
-								</div>
+								<UserMenu />
 							</div>
 						</header>
 					)}
