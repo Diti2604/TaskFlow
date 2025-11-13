@@ -29,9 +29,10 @@ resource "aws_subnet" "public-subnets" {
 }
 
 resource "aws_subnet" "private-subnets" {
-  count      = var.private_subnets_count
-  vpc_id     = aws_vpc.my-vpc.id
-  cidr_block = var.vpc_private_cidr_blocks[count.index]
+  count                   = var.private_subnets_count
+  vpc_id                  = aws_vpc.my-vpc.id
+  cidr_block              = var.vpc_private_cidr_blocks[count.index]
+  map_public_ip_on_launch = true 
   tags = {
     Name                                        = "private-subnet-${count.index}"
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
