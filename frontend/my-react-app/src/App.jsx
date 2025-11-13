@@ -9,6 +9,7 @@ import ProjectPage from './pages/ProjectPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import LoginPage from './pages/LoginPage'
 import RequireAuth from './lib/RequireAuth'
+import Toast from './components/Toast'
 
 const queryClient = new QueryClient()
 
@@ -75,6 +76,7 @@ export default function App() {
 		<QueryClientProvider client={queryClient}>
 			<BrowserRouter>
 				<InnerApp />
+				<Toast />
 			</BrowserRouter>
 		</QueryClientProvider>
 	)

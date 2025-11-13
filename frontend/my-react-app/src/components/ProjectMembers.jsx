@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import api from '../lib/api'
+import { showToast } from '../lib/toast'
 
 export default function ProjectMembers({ project, isOwner, onMemberChange }) {
   const [searchQuery, setSearchQuery] = useState('')
@@ -32,7 +33,7 @@ export default function ProjectMembers({ project, isOwner, onMemberChange }) {
       await api.post(`/api/projects/${project.id}/members`, { username })
       setSearchQuery('')
       setSearchResults([])
-      alert(`Invitation sent to ${username}!`)
+      showToast(`Invitation sent to ${username}!`, 'success')
       onMemberChange() // Refresh project data
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to send invitation')
@@ -40,14 +41,15 @@ export default function ProjectMembers({ project, isOwner, onMemberChange }) {
   }
 
   const handleRemoveMember = async (userId) => {
-    if (!confirm('Remove this member from the project?')) return
+    if (!window.confirm('Remove this member from the project?')) return
     
     setError('')
     try {
       await api.delete(`/api/projects/${project.id}/members/${userId}`)
+      showToast('Member removed from project', 'success')
       onMemberChange() // Refresh project data
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to remove member')
+      showToast(err.response?.data?.detail || 'Failed to remove member', 'error')
     }
   }
 
