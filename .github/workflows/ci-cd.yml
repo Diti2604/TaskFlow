@@ -216,9 +216,15 @@ jobs:
   deploy-to-s3:
     runs-on: ubuntu-latest
     needs: [terraform, deploy-to-eks]
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -231,13 +237,11 @@ jobs:
 
       - name: Set frontend build env (VITE_API_BASE)
         run: |
-          # Get ALB endpoint from the previous job
           ALB_ENDPOINT="${{ needs.deploy-to-eks.outputs.alb_endpoint }}"
           if [ -z "$ALB_ENDPOINT" ]; then
             echo "ERROR: ALB endpoint not available from deploy-to-eks job"
             exit 1
           fi
-          # Use https if you have certificate, otherwise http
           echo "VITE_API_BASE=https://${ALB_ENDPOINT}" >> $GITHUB_ENV
           echo "Building frontend with API base: https://${ALB_ENDPOINT}"
 
@@ -251,11 +255,13 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+
       - name: Getting Account ID
         id: build
         run: |
-            set -e
-            echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
+          set -e
+          echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
+
       - name: Read Terraform outputs (get S3 bucket)
         working-directory: ${{ env.TF_DIR }}
         id: tfoutputs
@@ -267,5 +273,9 @@ jobs:
 
       - name: Sync files to S3
         run: |
-          aws s3 sync frontend/my-react-app s3://$BUCKET_NAME --delete --exclude "node_modules/*" --exclude "package*.json" --exclude ".git/*" --exclude "public/*" --exclude "src/*"
-        # BUCKET_NAME is injected into the environment via $GITHUB_ENV in the previous step
+          aws s3 sync frontend/my-react-app s3://$BUCKET_NAME --delete \
+            --exclude "node_modules/*" \
+            --exclude "package*.json" \
+            --exclude ".git/*" \
+            --exclude "public/*" \
+            --exclude "src/*"
