@@ -279,17 +279,12 @@ def login(user: UserLogin):
     if not row:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    # Verify password (supports both hashed and plain text for migration period)
-    if row['password'].startswith('$2b$'):
-        # Hashed password - use verify_password
-        if not verify_password(user.password, row['password']):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-    else:
-        # Plain text password (for existing users) - direct comparison
-        if user.password != row['password']:
-            raise HTTPException(status_code=401, detail="Invalid credentials")
+    # Verify hashed password
+    if not verify_password(user.password, row['password']):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    return {"message": f"Welcome, {user.name}!", "user": row}
+    # Return user info WITHOUT password
+    return {"message": f"Welcome, {user.name}!", "user": {"id": row['id'], "name": row['name']}}
 
 # ============= PROJECT ENDPOINTS =============
 @app.get("/api/projects")
