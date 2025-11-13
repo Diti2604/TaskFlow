@@ -1,4 +1,4 @@
-resource "aws_cloudfront_origin_access_control" "default" {
+resource "aws_cloudfront_origin_access_control" "default-oac" {
   name                              = "my-oac"
   description                       = "OAC for S3 bucket"
   origin_access_control_origin_type = "s3"
@@ -12,7 +12,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   origin {
     domain_name              = aws_s3_bucket.site.bucket_regional_domain_name
     origin_id                = local.s3_origin_id
-    origin_access_control_id = aws_cloudfront_origin_access_control.default.id
+    origin_access_control_id = aws_cloudfront_origin_access_control.default-oac.id
   }
 
   enabled             = true
