@@ -9,10 +9,10 @@ locals {
 }
 
 resource "aws_acm_certificate" "cert" {
-  domain_name       = "indritcloud.com"
-  provider                = aws.us
-  subject_alternative_names = local.names
-  validation_method = "DNS"
+  domain_name               = "indritcloud.com"
+  provider                  = aws.us  # us-east-1 required for CloudFront (global service)
+  subject_alternative_names = concat(local.names, ["api.taskflow.${local.root_domain}", "*.taskflow.${local.root_domain}"])
+  validation_method         = "DNS"
 
   validation_option {
     domain_name       = "indritcloud.com"
@@ -23,6 +23,7 @@ resource "aws_acm_certificate" "cert" {
     create_before_destroy = true
   }
 }
+
 resource "aws_acm_certificate_validation" "cert" {
   provider                = aws.us
   certificate_arn         = aws_acm_certificate.cert.arn
@@ -32,3 +33,7 @@ resource "aws_acm_certificate_validation" "cert" {
     create = "10m"
   }
 }
+
+# Note: Since both CloudFront and ALB are in us-east-1, we can use the SAME certificate for both!
+# CloudFront MUST use us-east-1 (global service requirement)
+# ALB happens to also be in us-east-1, so one certificate covers both
