@@ -289,6 +289,27 @@ def get_project(project_id: int):
         except Exception: pass
     return project
 
+@app.patch("/api/projects/{project_id}")
+def update_project(project_id: int, project: ProjectCreate):
+    """Update a project's name and description"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE projects SET name=%s, description=%s WHERE id=%s",
+                (project.name, project.description, project_id),
+            )
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Project not found")
+            
+            # Get updated project
+            cur.execute("SELECT id, name, description, created_at FROM projects WHERE id=%s", (project_id,))
+            updated = cur.fetchone()
+    finally:
+        try: conn.close()
+        except Exception: pass
+    return updated
+
 # ============= TASK ENDPOINTS =============
 @app.post("/api/projects/{project_id}/tasks")
 def create_task(project_id: int, task: TaskCreate):

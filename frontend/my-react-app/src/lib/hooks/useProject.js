@@ -33,9 +33,17 @@ export function useUpdateTask() {
       const res = await api.patch(`/api/tasks/${id}`, payload)
       return res.data
     },
-    onSuccess: (_data, variables) => {
-      qc.invalidateQueries({ queryKey: ['project', variables?.projectId] })
+    onSuccess: (data, variables) => {
+      // Invalidate the specific project query
+      if (data?.project_id) {
+        qc.invalidateQueries({ queryKey: ['project', data.project_id] })
+      }
+      if (variables?.projectId) {
+        qc.invalidateQueries({ queryKey: ['project', variables.projectId] })
+      }
+      // Invalidate all projects and analytics
       qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['analytics'] })
     },
   })
 }
@@ -43,11 +51,31 @@ export function useUpdateTask() {
 export function useDeleteTask() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id }) => {
+    mutationFn: async ({ id, projectId }) => {
       const res = await api.delete(`/api/tasks/${id}`)
+      return { ...res.data, projectId }
+    },
+    onSuccess: (data) => {
+      // Invalidate the specific project query
+      if (data?.projectId) {
+        qc.invalidateQueries({ queryKey: ['project', data.projectId] })
+      }
+      // Invalidate all projects and analytics
+      qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['analytics'] })
+    },
+  })
+}
+
+export function useUpdateProject(projectId) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload) => {
+      const res = await api.patch(`/api/projects/${projectId}`, payload)
       return res.data
     },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['project', projectId] })
       qc.invalidateQueries({ queryKey: ['projects'] })
     },
   })
