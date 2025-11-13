@@ -1,25 +1,27 @@
-# Internet-facing ALB for FastAPI backend
-# ALB must be in PUBLIC subnets to receive traffic from the internet
-# Nodes are in PRIVATE subnets for security (ALB routes to pods via private IPs)
 resource "kubernetes_ingress_v1" "fastapi" {
   metadata {
     name      = "fastapi-ingress"
     namespace = "default"
+
     annotations = {
-      "kubernetes.io/ingress.class"              = "alb"
-      "alb.ingress.kubernetes.io/scheme"         = "internet-facing"
-      "alb.ingress.kubernetes.io/subnets"        = join(",", aws_subnet.public-subnets[*].id)  # MUST be public subnets for internet access
-      "alb.ingress.kubernetes.io/listen-ports"   = "[{\"HTTP\":80},{\"HTTPS\":443}]"
-      "alb.ingress.kubernetes.io/ssl-redirect"   = "443"  # Redirect HTTP to HTTPS
-      "alb.ingress.kubernetes.io/certificate-arn"= aws_acm_certificate_validation.cert.certificate_arn  # Same cert as CloudFront (both in us-east-1)
-      "alb.ingress.kubernetes.io/target-type"    = "ip"  # Route directly to pod IPs (not node ports)
-      "alb.ingress.kubernetes.io/healthcheck-path"= "/"
-      "alb.ingress.kubernetes.io/tags"           = "app=fastapi,ingress-name=fastapi-ingress"
+      "kubernetes.io/ingress.class"                = "alb"
+      "alb.ingress.kubernetes.io/scheme"           = "internet-facing"
+      "alb.ingress.kubernetes.io/subnets"          = join(",", aws_subnet.public-subnets[*].id)
+      "alb.ingress.kubernetes.io/listen-ports"     = "[{\"HTTP\":80},{\"HTTPS\":443}]"
+      "alb.ingress.kubernetes.io/ssl-redirect"     = "443"
+      "alb.ingress.kubernetes.io/certificate-arn"  = aws_acm_certificate.cert.arn
+      "alb.ingress.kubernetes.io/target-type"      = "ip"
+      "alb.ingress.kubernetes.io/healthcheck-path" = "/"
+      "alb.ingress.kubernetes.io/tags"             = "app=fastapi,ingress-name=fastapi-ingress"
     }
-    }            
+  }
+
   spec {
     ingress_class_name = "alb"
+
     rule {
+      host = "api.taskflow.indritcloud.com"
+
       http {
         path {
           path      = "/"
@@ -27,7 +29,9 @@ resource "kubernetes_ingress_v1" "fastapi" {
           backend {
             service {
               name = "fastapi-service"
-              port { number = 80 }
+              port {
+                number = 80
+              }
             }
           }
         }
@@ -35,6 +39,7 @@ resource "kubernetes_ingress_v1" "fastapi" {
     }
   }
 }
+
 resource "aws_iam_role" "alb_controller_sa" {
   name = "alb-controller-sa-role"
   assume_role_policy = jsonencode({
