@@ -17,6 +17,8 @@ app.add_middleware(
         "https://taskflow.indritcloud.com",
         "https://www.taskflow.indritcloud.com",
         "https://api.taskflow.indritcloud.com",
+        "http://localhost:5173", 
+        "http://localhost:3000",  
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -38,7 +40,6 @@ class UserLogin(BaseModel):
 class UserCreate(BaseModel):
     name: str
     password: str
-    email: Optional[str] = None
 
 class ProjectCreate(BaseModel):
     name: str
@@ -102,7 +103,6 @@ def _ensure_db_and_table():
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     name VARCHAR(255) NOT NULL UNIQUE,
                     password VARCHAR(255) NOT NULL,
-                    email VARCHAR(255),
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             """)
@@ -205,8 +205,8 @@ def signup(user: UserCreate):
                 raise HTTPException(status_code=400, detail="User already exists")
             
             cur.execute(
-                "INSERT INTO users (name, password, email) VALUES (%s, %s, %s)",
-                (user.name, user.password, user.email),
+                "INSERT INTO users (name, password) VALUES (%s, %s)",
+                (user.name, user.password),
             )
             user_id = cur.lastrowid
     finally:
@@ -220,7 +220,7 @@ def login(user: UserLogin):
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, name, email FROM users WHERE name=%s AND password=%s",
+                "SELECT id, name FROM users WHERE name=%s AND password=%s",
                 (user.name, user.password),
             )
             row = cur.fetchone()
