@@ -233,12 +233,15 @@ def login(user: UserLogin):
 
 # ============= PROJECT ENDPOINTS =============
 @app.get("/api/projects")
-def get_projects():
-    """Get all projects with their tasks"""
+def get_projects(user_id: int):
+    """Get all projects with their tasks for a specific user"""
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+    
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT id, name, description, created_at FROM projects ORDER BY created_at DESC")
+            cur.execute("SELECT id, name, description, created_at FROM projects WHERE user_id=%s ORDER BY created_at DESC", (user_id,))
             projects = cur.fetchall()
             
             for project in projects:
@@ -253,14 +256,17 @@ def get_projects():
     return projects
 
 @app.post("/api/projects")
-def create_project(project: ProjectCreate):
-    """Create a new project"""
+def create_project(project: ProjectCreate, user_id: int):
+    """Create a new project for a specific user"""
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+    
     conn = get_connection()
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO projects (name, description) VALUES (%s, %s)",
-                (project.name, project.description),
+                "INSERT INTO projects (name, description, user_id) VALUES (%s, %s, %s)",
+                (project.name, project.description, user_id),
             )
             project_id = cur.lastrowid
     finally:
@@ -269,12 +275,15 @@ def create_project(project: ProjectCreate):
     return {"id": project_id, "name": project.name, "description": project.description, "tasks": []}
 
 @app.get("/api/projects/{project_id}")
-def get_project(project_id: int):
-    """Get a specific project with tasks"""
+def get_project(project_id: int, user_id: int):
+    """Get a specific project with tasks (user must own the project)"""
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+    
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT id, name, description, created_at FROM projects WHERE id=%s", (project_id,))
+            cur.execute("SELECT id, name, description, created_at FROM projects WHERE id=%s AND user_id=%s", (project_id, user_id))
             project = cur.fetchone()
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
@@ -290,17 +299,20 @@ def get_project(project_id: int):
     return project
 
 @app.patch("/api/projects/{project_id}")
-def update_project(project_id: int, project: ProjectCreate):
-    """Update a project's name and description"""
+def update_project(project_id: int, project: ProjectCreate, user_id: int):
+    """Update a project's name and description (user must own the project)"""
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+    
     conn = get_connection()
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "UPDATE projects SET name=%s, description=%s WHERE id=%s",
-                (project.name, project.description, project_id),
+                "UPDATE projects SET name=%s, description=%s WHERE id=%s AND user_id=%s",
+                (project.name, project.description, project_id, user_id),
             )
             if cur.rowcount == 0:
-                raise HTTPException(status_code=404, detail="Project not found")
+                raise HTTPException(status_code=404, detail="Project not found or unauthorized")
             
             # Get updated project
             cur.execute("SELECT id, name, description, created_at FROM projects WHERE id=%s", (project_id,))
@@ -382,16 +394,21 @@ def delete_task(task_id: int):
 
 # ============= ANALYTICS ENDPOINTS =============
 @app.get("/api/analytics")
-def get_analytics():
-    """Get task analytics"""
+def get_analytics(user_id: int):
+    """Get task analytics for a specific user"""
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+    
     conn = get_connection()
     try:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT status, COUNT(*) as count 
-                FROM tasks 
-                GROUP BY status
-            """)
+                SELECT t.status, COUNT(*) as count 
+                FROM tasks t
+                JOIN projects p ON t.project_id = p.id
+                WHERE p.user_id = %s
+                GROUP BY t.status
+            """, (user_id,))
             rows = cur.fetchall()
             
             task_status_counts = {

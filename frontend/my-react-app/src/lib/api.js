@@ -8,12 +8,12 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-// Attach auth token if present
+// Attach user_id as query param to all requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers = config.headers || {}
-    config.headers.Authorization = `Bearer ${token}`
+  const userId = localStorage.getItem('userId')
+  if (userId) {
+    config.params = config.params || {}
+    config.params.user_id = userId
   }
   return config
 })
