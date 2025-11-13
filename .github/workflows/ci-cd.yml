@@ -129,7 +129,7 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
         run: |
           set -e
-          terraform init -upgrade "
+          terraform init -upgrade
           RDS_ENDPOINT=$(terraform output -raw rds_endpoint)
           RDS_SECRET_ARN=$(terraform output -raw rds_secret_arn)
           echo "rds_endpoint=${RDS_ENDPOINT}" >> $GITHUB_OUTPUT
@@ -256,7 +256,7 @@ jobs:
         id: tfoutputs
         run: |
           set -e
-          terraform init -upgrade "
+          terraform init -upgrade
           BUCKET_NAME=$(terraform output -raw site_bucket_name)
           echo "BUCKET_NAME=${BUCKET_NAME}" >> $GITHUB_ENV
 
