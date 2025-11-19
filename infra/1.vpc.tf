@@ -161,3 +161,16 @@ resource "aws_vpc_endpoint" "secrets_manager" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 }
+
+resource "aws_vpc_endpoint" "logs" {
+  vpc_id              = aws_vpc.my-vpc.id
+  service_name        = "com.amazonaws.${var.aws_region}.logs"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private-subnets[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled = true
+  
+  tags = {
+    Name = "cloudwatch-logs-endpoint"
+  }
+}
