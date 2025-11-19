@@ -14,7 +14,7 @@ def handler(event, context):
     
     cluster_name = os.environ['CLUSTER_NAME']
     service_name = os.environ['SERVICE_NAME']
-    region = os.environ.get('AWS_REGION', 'us-east-1')
+    region = os.environ.get('REGION', os.environ.get('AWS_REGION', 'us-east-1'))
     
     ecs_client = boto3.client('ecs', region_name=region)
     

@@ -59,7 +59,7 @@ resource "aws_lambda_function" "ecs_scheduler" {
     variables = {
       CLUSTER_NAME = aws_ecs_cluster.main.name
       SERVICE_NAME = aws_ecs_service.api.name
-      AWS_REGION   = var.aws_region
+      REGION       = var.aws_region
     }
   }
 
