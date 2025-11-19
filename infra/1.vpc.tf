@@ -52,19 +52,6 @@ resource "aws_eip" "elastic-ip-addresses" {
   ]
 }
 
-
-# resource "aws_route_table" "my-private-RTs" {
-#   count  = var.private_route_table_count
-#   vpc_id = aws_vpc.my-vpc.id
-#   route {
-#     cidr_block     = var.route_table_cidr_block
-#     nat_gateway_id = aws_nat_gateway.nat-gateways[0].id
-#   }
-#   tags = {
-#     Name = "my-private-RT-${count.index}"
-#   }
-# }
-
 resource "aws_route_table" "my-public-RTs" {
   count  = var.public_route_table_count
   vpc_id = aws_vpc.my-vpc.id
@@ -77,11 +64,7 @@ resource "aws_route_table" "my-public-RTs" {
   }
 }
 
-# resource "aws_route_table_association" "table-association-of-my-private-RTs" {
-#   count          = var.table-association-of-my-private-RTs-count
-#   subnet_id      = aws_subnet.private-subnets[count.index].id
-#   route_table_id = aws_route_table.my-private-RTs[count.index].id
-# }
+
 resource "aws_route_table_association" "table-association-of-my-public-RTs" {
   count          = var.table-association-of-my-public-RTs-count
   subnet_id      = aws_subnet.public-subnets[count.index].id
@@ -145,13 +128,7 @@ resource "aws_vpc_endpoint" "ecr_dkr" {
   private_dns_enabled = true
 }
 
-# S3 endpoint - commented out as private route tables are not used with ECS
-# resource "aws_vpc_endpoint" "s3" {
-#   vpc_id            = aws_vpc.my-vpc.id
-#   service_name      = "com.amazonaws.${var.aws_region}.s3"
-#   vpc_endpoint_type = "Gateway"
-#   route_table_ids   = aws_route_table.my-private-RTs[*].id
-# }
+
 
 resource "aws_vpc_endpoint" "secrets_manager" {
   vpc_id              = aws_vpc.my-vpc.id
