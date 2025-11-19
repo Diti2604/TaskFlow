@@ -1,5 +1,7 @@
 name: CI/CD Pipeline - ECS
 on:
+  push:
+    branches: [ main, test ]
   pull_request:
     branches: [ test ]
 
