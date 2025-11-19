@@ -32,10 +32,6 @@ resource "aws_security_group" "rds_sg" {
   name        = "rds-sg"
   description = "Allow inbound traffic to the RDS instance"
   vpc_id      = aws_vpc.my-vpc.id
-  
-  lifecycle {
-    ignore_changes = [ingress, egress]
-  }
 }
 
 

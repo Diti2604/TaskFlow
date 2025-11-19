@@ -142,16 +142,7 @@ resource "aws_security_group" "ecs_tasks" {
   }
 }
 
-# Allow ECS tasks to access RDS
-resource "aws_security_group_rule" "rds_from_ecs" {
-  type                     = "ingress"
-  from_port                = 3306
-  to_port                  = 3306
-  protocol                 = "tcp"
-  security_group_id        = aws_security_group.rds_sg.id
-  source_security_group_id = aws_security_group.ecs_tasks.id
-  description              = "Allow ECS tasks to access RDS"
-}
+
 
 # ============= ECS TASK DEFINITION =============
 resource "aws_ecs_task_definition" "api" {
