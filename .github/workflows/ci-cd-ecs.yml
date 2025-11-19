@@ -181,12 +181,51 @@ jobs:
             --task-definition ${{ steps.register_task_def.outputs.new_task_def_arn }} \
             --force-new-deployment
 
+      - name: Quick Health Check
+        run: |
+          echo "Checking task startup (2 minute timeout)..."
+          for i in {1..24}; do
+            RUNNING=$(aws ecs describe-services \
+              --cluster ${ECS_CLUSTER} \
+              --services ${ECS_SERVICE} \
+              --query 'services[0].runningCount' \
+              --output text)
+            
+            FAILED=$(aws ecs describe-services \
+              --cluster ${ECS_CLUSTER} \
+              --services ${ECS_SERVICE} \
+              --query 'services[0].deployments[0].failedTasks' \
+              --output text)
+            
+            echo "Attempt $i/24: Running=$RUNNING, Failed=$FAILED"
+            
+            if [ "$FAILED" -gt "2" ]; then
+              echo "❌ Multiple task failures detected - checking events..."
+              aws ecs describe-services \
+                --cluster ${ECS_CLUSTER} \
+                --services ${ECS_SERVICE} \
+                --query 'services[0].events[:5].[createdAt,message]' \
+                --output text
+              exit 1
+            fi
+            
+            if [ "$RUNNING" -ge "1" ]; then
+              echo "✓ At least one task is running!"
+              break
+            fi
+            
+            sleep 5
+          done
+
       - name: Wait for Service Stability
         run: |
-          echo "Waiting for service to become stable (up to 10 minutes)..."
-          aws ecs wait services-stable \
-            --cluster ${ECS_CLUSTER} \
-            --services ${ECS_SERVICE}
+          echo "Waiting for full service stability (up to 5 minutes)..."
+          timeout 300 bash -c '
+            until [ $(aws ecs describe-services --cluster '"${ECS_CLUSTER}"' --services '"${ECS_SERVICE}"' --query "services[0].runningCount" --output text) -eq 2 ]; do
+              echo "Waiting for 2 running tasks..."
+              sleep 10
+            done
+          ' || { echo "Timeout waiting for service stability"; exit 1; }
           
           echo "✓ Service is stable!"
 

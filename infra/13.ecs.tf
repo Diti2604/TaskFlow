@@ -260,7 +260,7 @@ resource "aws_ecs_service" "api" {
   network_configuration {
     subnets          = slice(aws_subnet.private-subnets[*].id, 0, var.private_subnets_count)
     security_groups  = [aws_security_group.ecs_tasks.id]
-    assign_public_ip = false
+    assign_public_ip = true
   }
 
   load_balancer {
