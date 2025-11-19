@@ -32,12 +32,16 @@ resource "aws_security_group" "rds_sg" {
   name        = "rds-sg"
   description = "Allow inbound traffic to the RDS instance"
   vpc_id      = aws_vpc.my-vpc.id
+  
+  # REMOVE the 0.0.0.0/0 ingress rule
+  # RDS access is already configured via aws_security_group_rule.rds_from_ecs in 13.ecs.tf
+  
   ingress {
     from_port   = 3306
     to_port     = 3306
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow all inbound traffic on port 3306 for testing"
+    security_groups = [aws_security_group.ecs_tasks.id]  # Only from ECS
+    description = "Allow ECS tasks to access RDS"
   }
 }
 

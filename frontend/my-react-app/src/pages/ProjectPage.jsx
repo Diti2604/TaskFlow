@@ -139,7 +139,6 @@ export default function ProjectPage() {
         </div>
       </section>
 
-      {/* Members Section */}
       <ProjectMembers 
         project={project} 
         isOwner={isOwner} 

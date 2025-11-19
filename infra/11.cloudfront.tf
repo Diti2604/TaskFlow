@@ -19,13 +19,15 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   default_root_object = "index.html"
   
   default_cache_behavior {
-    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods         = ["GET", "HEAD"]
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD", "OPTIONS"]
     target_origin_id       = local.s3_origin_id
-    compress               = true
     viewer_protocol_policy = "redirect-to-https"
+    compress               = true  
 
-    cache_policy_id = data.aws_cloudfront_cache_policy.caching_optimized.id
+    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_optimized.id
+    origin_request_policy_id = "88a5eaf4-2fd4-4709-b370-b4c650ea3fcf"  
+
   }
 
   custom_error_response {
