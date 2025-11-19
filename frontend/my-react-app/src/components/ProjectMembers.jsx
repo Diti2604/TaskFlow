@@ -19,6 +19,7 @@ export default function ProjectMembers({ project, isOwner, onMemberChange }) {
     try {
       const res = await api.get('/api/users/search', { params: { query: searchQuery } })
       setSearchResults(res.data)
+    // eslint-disable-next-line no-unused-vars
     } catch (err) {
       setError('Failed to search users')
       setSearchResults([])
@@ -34,7 +35,7 @@ export default function ProjectMembers({ project, isOwner, onMemberChange }) {
       setSearchQuery('')
       setSearchResults([])
       showToast(`Invitation sent to ${username}!`, 'success')
-      onMemberChange() // Refresh project data
+      onMemberChange() 
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to send invitation')
     }
@@ -47,7 +48,7 @@ export default function ProjectMembers({ project, isOwner, onMemberChange }) {
     try {
       await api.delete(`/api/projects/${project.id}/members/${userId}`)
       showToast('Member removed from project', 'success')
-      onMemberChange() // Refresh project data
+      onMemberChange() 
     } catch (err) {
       showToast(err.response?.data?.detail || 'Failed to remove member', 'error')
     }
@@ -57,7 +58,6 @@ export default function ProjectMembers({ project, isOwner, onMemberChange }) {
     <div className="card" style={{ padding: 24, marginTop: 16 }}>
       <h2 style={{ marginTop: 0, marginBottom: 16 }}>Members</h2>
       
-      {/* Current Members */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 8 }}>Current members:</div>
         {project.members && project.members.length > 0 ? (
@@ -81,7 +81,6 @@ export default function ProjectMembers({ project, isOwner, onMemberChange }) {
         )}
       </div>
 
-      {/* Add Member (only owner) */}
       {isOwner && (
         <div>
           <div style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 8 }}>Invite a member:</div>
@@ -105,7 +104,6 @@ export default function ProjectMembers({ project, isOwner, onMemberChange }) {
             </button>
           </div>
 
-          {/* Search Results */}
           {searchQuery && !loading && searchResults.length === 0 && (
             <div style={{ marginTop: 8, padding: 8, background: 'var(--bg)', borderRadius: 4, color: 'var(--muted)', fontSize: 14 }}>
               No users found with username "{searchQuery}"

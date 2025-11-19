@@ -3,3 +3,11 @@
 *.tfstate
 *.tfstate.*
 *.tfvars
+
+.env
+.env.*
+*.tfstate
+*.tfstate.*
+.terraform/
+*.pem
+*.key

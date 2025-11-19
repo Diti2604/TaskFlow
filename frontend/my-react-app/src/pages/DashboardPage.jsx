@@ -32,7 +32,6 @@ export default function DashboardPage() {
             })()}
           </div>
           
-          {/* Show pending invitations */}
           <Invitations onInvitationResponse={() => refetch()} />
           
           <div className="grid cols-3">

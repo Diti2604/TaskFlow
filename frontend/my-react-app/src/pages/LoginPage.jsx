@@ -30,12 +30,10 @@ export default function LoginPage() {
       
       const response = await api.post(endpoint, payload)
       
-      // Store user info and userId
       const user = response.data.user || { name }
       localStorage.setItem('pm_user', JSON.stringify(user))
       localStorage.setItem('userId', user.id)
       
-      // Navigate to dashboard
       navigate(from, { replace: true })
     } catch (err) {
       console.error('Auth error:', err)
