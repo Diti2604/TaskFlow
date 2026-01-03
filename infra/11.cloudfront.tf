@@ -8,7 +8,7 @@ resource "aws_cloudfront_origin_access_control" "default-oac" {
 
 resource "aws_cloudfront_distribution" "s3_distribution" {
   # Temporarily commented out - will add after distribution is created
-  # aliases = ["taskflow.indritcloud.com"]
+  aliases = ["taskflow.indritcloud.com"]
   
   origin {
     domain_name              = aws_s3_bucket.site.bucket_regional_domain_name
