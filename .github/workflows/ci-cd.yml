@@ -345,6 +345,15 @@ jobs:
           
           echo "✅ State file deletion completed"
       
+      - name: Delete remote-backend local state file
+        run: |
+          echo "=== Deleting local state file in remote-backend directory ==="
+          rm -f remote-backend/terraform.tfstate
+          rm -f remote-backend/terraform.tfstate.backup
+          rm -f remote-backend/.terraform.lock.hcl
+          rm -rf remote-backend/.terraform/
+          echo "✅ Remote-backend local state deleted"
+      
       - name: Verify state is empty
         working-directory: ./infra
         run: |
