@@ -43,7 +43,7 @@ jobs:
         continue-on-error: true
         run: |
           # Check if OAC exists in AWS but not in state
-          OAC_ID=$(aws cloudfront list-origin-access-controls --query "OriginAccessControlList.Items[?Name=='my-oac'].Id" --output text)
+          OAC_ID=$(aws cloudfront list-origin-access-controls --query "OriginAccessControlList.Items[?Name=='my-oac-v2'].Id" --output text)
           if [ ! -z "$OAC_ID" ]; then
             echo "Found existing OAC: $OAC_ID"
             terraform import aws_cloudfront_origin_access_control.default-oac "$OAC_ID" || echo "Already in state or import failed"
@@ -277,19 +277,23 @@ jobs:
         run: |
           aws s3 sync frontend/my-react-app/dist s3://$BUCKET_NAME --delete
       - name: Detect CloudFront Distribution ID
+        id: detect_cf
         run: |
           CF_ID=$(aws cloudfront list-distributions \
             --query "DistributionList.Items[?Aliases.Items[?contains(@, 'taskflow.indritcloud.com')]].Id | [0]" \
             --output text)
 
           if [ "$CF_ID" = "None" ] || [ -z "$CF_ID" ]; then
-            echo "ERROR: Could not detect CloudFront distribution for your domain"
-            exit 1
+            echo "WARNING: No CloudFront distribution found for taskflow.indritcloud.com"
+            echo "cf_exists=false" >> $GITHUB_OUTPUT
+          else
+            echo "CF_ID=$CF_ID" >> $GITHUB_ENV
+            echo "cf_exists=true" >> $GITHUB_OUTPUT
+            echo "Detected CloudFront ID: $CF_ID"
           fi
 
-          echo "CF_ID=$CF_ID" >> $GITHUB_ENV
-          echo "Detected CloudFront ID: $CF_ID"
       - name: Invalidate CloudFront cache
+        if: steps.detect_cf.outputs.cf_exists == 'true'
         run: |
           aws cloudfront create-invalidation \
             --distribution-id ${{ env.CF_ID }} \
