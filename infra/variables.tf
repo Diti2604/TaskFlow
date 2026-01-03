@@ -48,7 +48,7 @@ variable "private_subnets_count" {
 variable "elastic_ip_addresses_count" {
   type        = number
   description = "The number of EIP addresses in the VPC"
-  default     = 1
+  default     = 2
 }
 
 variable "nat_gateway_count" {
