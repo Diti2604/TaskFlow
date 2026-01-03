@@ -40,30 +40,29 @@ resource "aws_route53_record" "cloudmeter" {
   }
 }
 
-# EKS resources commented out - now using ECS
-# resource "time_sleep" "wait_for_alb" {
-#   depends_on = [kubernetes_ingress_v1.fastapi, helm_release.aws_lb_controller]
-#   create_duration = "300s"
-# }
+# EKS ALB ingress - wait for creation then get ALB details
+resource "time_sleep" "wait_for_alb" {
+  depends_on = [kubernetes_ingress_v1.fastapi, helm_release.aws_lb_controller]
+  create_duration = "180s"
+}
 
-# data "aws_lb" "fastapi_alb" {
-#   depends_on = [time_sleep.wait_for_alb]
-#   tags = { 
-#     "ingress.k8s.aws/resource" = "LoadBalancer",
-#     "ingress.k8s.aws/stack" = "default/fastapi-ingress"
-#   }
-# }
+data "aws_lb" "fastapi_alb" {
+  depends_on = [time_sleep.wait_for_alb]
+  tags = { 
+    "ingress.k8s.aws/resource" = "LoadBalancer",
+    "ingress.k8s.aws/stack" = "default/fastapi-ingress"
+  }
+}
 
-# Route53 record for API is now in 15.ecs-alb.tf
-# resource "aws_route53_record" "api" {
-#   zone_id = data.aws_route53_zone.main.zone_id
-#   name    = "api.taskflow.indritcloud.com"
-#   type    = "A"
-#   allow_overwrite = true
+resource "aws_route53_record" "api" {
+  zone_id = data.aws_route53_zone.main.zone_id
+  name    = "api.taskflow.indritcloud.com"
+  type    = "A"
+  allow_overwrite = true
 
-#   alias {
-#     name                   = data.aws_lb.fastapi_alb.dns_name
-#     zone_id                = data.aws_lb.fastapi_alb.zone_id
-#     evaluate_target_health = true
-#   }
-# }
+  alias {
+    name                   = data.aws_lb.fastapi_alb.dns_name
+    zone_id                = data.aws_lb.fastapi_alb.zone_id
+    evaluate_target_health = true
+  }
+}
