@@ -316,7 +316,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: us-east-1
       
       - name: Initialize Terraform
         working-directory: ./infra
@@ -330,12 +330,20 @@ jobs:
       
       - name: Delete S3 backend state file directly
         run: |
-          echo "Deleting Terraform state from S3 backend..."
-          aws s3 rm s3://my-s3-bucket-851725395166/backend || echo "State file not found"
-          aws s3 rm s3://my-s3-bucket-851725395166/backend.backup || echo "Backup not found"
+          set -x  # Enable debug output
+          echo "=== Listing S3 bucket contents BEFORE deletion ==="
+          aws s3 ls s3://my-s3-bucket-851725395166/ --recursive
           
-          echo "=== Listing S3 bucket contents ==="
-          aws s3 ls s3://my-s3-bucket-851725395166/ || echo "Bucket empty or not accessible"
+          echo "=== Deleting Terraform state from S3 backend ==="
+          aws s3 rm s3://my-s3-bucket-851725395166/backend --region us-east-1
+          
+          echo "=== Attempting to delete backup if exists ==="
+          aws s3 rm s3://my-s3-bucket-851725395166/backend.backup --region us-east-1 || echo "No backup file"
+          
+          echo "=== Listing S3 bucket contents AFTER deletion ==="
+          aws s3 ls s3://my-s3-bucket-851725395166/ --recursive
+          
+          echo "✅ State file deletion completed"
       
       - name: Verify state is empty
         working-directory: ./infra
