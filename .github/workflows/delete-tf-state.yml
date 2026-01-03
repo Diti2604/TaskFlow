@@ -1,0 +1,87 @@
+name: Delete Terraform State
+
+on:
+  workflow_run:
+    workflows: ["CI/CD Pipeline"]
+    types:
+      - completed
+    branches:
+      - test
+
+jobs:
+  delete-terraform-state:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: latest
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Initialize Terraform
+        working-directory: ./infra
+        run: terraform init
+      
+      - name: List all resources in state
+        working-directory: ./infra
+        run: |
+          echo "Resources currently in state:"
+          terraform state list || echo "No resources found or state is empty"
+      
+      - name: Remove all resources from state
+        working-directory: ./infra
+        run: |
+          # Get list of all resources
+          RESOURCES=$(terraform state list)
+          
+          if [ -z "$RESOURCES" ]; then
+            echo "No resources in state to remove"
+          else
+            # Remove each resource from state
+            echo "$RESOURCES" | while read resource; do
+              echo "Removing $resource from state..."
+              terraform state rm "$resource"
+            done
+          fi
+      
+      - name: Verify state is empty
+        working-directory: ./infra
+        run: |
+          REMAINING=$(terraform state list)
+          if [ -z "$REMAINING" ]; then
+            echo "✅ State successfully cleared - no resources remaining"
+          else
+            echo "⚠️  Warning: Some resources still in state:"
+            echo "$REMAINING"
+            exit 1
+          fi
+      
+      - name: Delete remote state file (S3)
+        if: success()
+        run: |
+          # If using S3 backend, delete the state file
+          # Update bucket name and key as per your backend configuration
+          echo "Deleting remote state file from S3..."
+          aws s3 rm s3://${{ secrets.TF_STATE_BUCKET }}/terraform.tfstate || echo "State file not found or already deleted"
+          aws s3 rm s3://${{ secrets.TF_STATE_BUCKET }}/terraform.tfstate.backup || echo "Backup file not found"
+      
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Terraform State Deletion Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🗑️  Terraform state deletion workflow completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Warning:** This action has removed all resources from the Terraform state." >> $GITHUB_STEP_SUMMARY
+          echo "The actual infrastructure resources still exist in AWS and must be manually deleted if needed." >> $GITHUB_STEP_SUMMARY
