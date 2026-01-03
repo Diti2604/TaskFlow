@@ -35,7 +35,13 @@ resource "aws_subnet" "private-subnets" {
   vpc_id                  = aws_vpc.my-vpc.id
   cidr_block              = var.vpc_private_cidr_blocks[count.index]
   map_public_ip_on_launch = false
-  availability_zone = data.aws_availability_zones.available.names[count.index]
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
+  
+  tags = {
+    Name                                        = "private-subnet-${count.index}"
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+    "kubernetes.io/role/internal-elb"           = "1"
+  }
 }
 resource "aws_internet_gateway" "my-internet-gateway" {
   vpc_id = aws_vpc.my-vpc.id
@@ -70,6 +76,42 @@ resource "aws_route_table_association" "table-association-of-my-public-RTs" {
   subnet_id      = aws_subnet.public-subnets[count.index].id
   route_table_id = aws_route_table.my-public-RTs[count.index].id
 }
+
+# NAT Gateways for private subnets
+resource "aws_nat_gateway" "nat-gateways" {
+  count         = var.private_subnets_count
+  allocation_id = aws_eip.elastic-ip-addresses[count.index].id
+  subnet_id     = aws_subnet.public-subnets[count.index].id
+  
+  tags = {
+    Name = "nat-gateway-${count.index}"
+  }
+  
+  depends_on = [aws_internet_gateway.my-internet-gateway]
+}
+
+# Private route tables with NAT gateway routes
+resource "aws_route_table" "private-RTs" {
+  count  = var.private_subnets_count
+  vpc_id = aws_vpc.my-vpc.id
+  
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat-gateways[count.index].id
+  }
+  
+  tags = {
+    Name = "private-RT-${count.index}"
+  }
+}
+
+# Associate private subnets with private route tables
+resource "aws_route_table_association" "private-RT-associations" {
+  count          = var.private_subnets_count
+  subnet_id      = aws_subnet.private-subnets[count.index].id
+  route_table_id = aws_route_table.private-RTs[count.index].id
+}
+
 data "aws_route_table" "main-RT" {
   vpc_id = aws_vpc.my-vpc.id
   filter {
