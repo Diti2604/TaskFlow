@@ -1,5 +1,5 @@
 resource "aws_cloudfront_origin_access_control" "default-oac" {
-  name                              = "my-oac"
+  name                              = "my-oac-v2"
   description                       = "OAC for S3 bucket"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
