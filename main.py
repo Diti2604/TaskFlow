@@ -223,7 +223,7 @@ def get_connection():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DB connection failed: {e}")
 
-# ============= PASSWORD HASHING =============
+#  PASSWORD HASHING 
 def hash_password(password: str) -> str:
     """Hash a password using bcrypt"""
     salt = bcrypt.gensalt()
@@ -238,7 +238,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def root():
     return {"message": "Hello from FastAPI on EC2!!", "status": "healthy"}
 
-# ============= AUTH ENDPOINTS =============
+#  AUTH ENDPOINTS 
 @app.post("/signup")
 def signup(user: UserCreate):
     conn = get_connection()
@@ -286,7 +286,7 @@ def login(user: UserLogin):
     # Return user info WITHOUT password
     return {"message": f"Welcome, {user.name}!", "user": {"id": row['id'], "name": row['name']}}
 
-# ============= PROJECT ENDPOINTS =============
+#  PROJECT ENDPOINTS 
 @app.get("/api/projects")
 def get_projects(user_id: int):
     """Get all projects (owned + shared) for a specific user"""
@@ -411,7 +411,7 @@ def update_project(project_id: int, project: ProjectCreate, user_id: int):
         except Exception: pass
     return updated
 
-# ============= USER & MEMBER ENDPOINTS =============
+#  USER & MEMBER ENDPOINTS 
 @app.get("/api/users/search")
 def search_users(query: str, user_id: int):
     """Search for users by username (exclude current user)"""
@@ -612,7 +612,7 @@ def decline_invitation(invitation_id: int, user_id: int):
         except Exception: pass
     return {"message": "Invitation declined"}
 
-# ============= TASK ENDPOINTS =============
+#  TASK ENDPOINTS 
 @app.post("/api/projects/{project_id}/tasks")
 def create_task(project_id: int, task: TaskCreate):
     """Create a new task in a project"""
@@ -682,7 +682,7 @@ def delete_task(task_id: int):
         except Exception: pass
     return {"message": "Task deleted"}
 
-# ============= ANALYTICS ENDPOINTS =============
+#  ANALYTICS ENDPOINTS 
 @app.get("/api/analytics")
 def get_analytics(user_id: int):
     """Get task analytics for a specific user (owned + shared projects)"""
