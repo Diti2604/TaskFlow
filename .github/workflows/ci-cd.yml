@@ -301,7 +301,7 @@ jobs:
   
   delete-terraform-state:
     runs-on: ubuntu-latest
-  
+    needs: [deploy-to-s3]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
